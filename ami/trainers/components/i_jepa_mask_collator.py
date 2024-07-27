@@ -1,27 +1,10 @@
 # Ref: https://github.com/facebookresearch/ijepa
 
-from functools import partial
-from pathlib import Path
-import itertools
-import copy
+from typing import List, Optional, Tuple
 
+import math
 import torch
-from torch.distributions import kl_divergence
-from torch.distributions.normal import Normal
-from torch.nn.functional import mse_loss
-from torch.optim import Optimizer
-from torch.utils.data import DataLoader
-from typing_extensions import override
-
-from ami.data.buffers.buffer_names import BufferNames
-from ami.data.buffers.random_data_buffer import RandomDataBuffer
-from ami.data.interfaces import ThreadSafeDataUser
-from ami.models.model_names import ModelNames
-from ami.models.model_wrapper import ModelWrapper
-from ami.models.i_jepa import IJEPAEncoder, IJEPAPredictor
-from ami.tensorboard_loggers import StepIntervalLogger
-
-from .base_trainer import BaseTrainer
+from multiprocessing import Value
 
 
 class IJEPAMaskCollator:
@@ -32,15 +15,16 @@ class IJEPAMaskCollator:
         enc_mask_scale=(0.85, 1.0),
         pred_mask_scale=(0.15, 0.2),
         aspect_ratio=(0.75, 1.5),
-        nenc=1,
-        npred=4,
+        n_masks_for_context_encoder=1,
+        n_masks_for_predictor=4,
         min_keep=10,
         allow_overlap=False,
     ) -> None:
-        super(MaskCollator, self).__init__()
+        super(IJEPAMaskCollator, self).__init__()
         if not isinstance(input_size, tuple):
             input_size = (input_size,) * 2
         self.patch_size = patch_size
+        assert input_size[0]%patch_size==0 and input_size[1]%patch_size==0
         self.height, self.width = (
             input_size[0] // patch_size,
             input_size[1] // patch_size,
@@ -48,8 +32,8 @@ class IJEPAMaskCollator:
         self.enc_mask_scale = enc_mask_scale
         self.pred_mask_scale = pred_mask_scale
         self.aspect_ratio = aspect_ratio
-        self.nenc = nenc
-        self.npred = npred
+        self.n_masks_for_context_encoder = n_masks_for_context_encoder
+        self.n_masks_for_predictor = n_masks_for_predictor
         self.min_keep = min_keep  # minimum number of patches to keep
         self.allow_overlap = (
             allow_overlap  # whether to allow overlap b/w enc and pred masks
@@ -84,7 +68,7 @@ class IJEPAMaskCollator:
         """
         _rand = torch.rand(1, generator=generator).item()
         # -- Sample mask scale
-        min_s, max_s = scale
+        min_s, max_s = scale_range
         mask_scale = min_s + _rand * (max_s - min_s)
         max_keep = int(self.height * self.width * mask_scale)
         # -- Sample mask aspect-ratio
@@ -154,7 +138,7 @@ class IJEPAMaskCollator:
 
     def __call__(
         self, batch: torch.Tensor
-    ) -> Tuple[torch.tensor, torch.tensor, torch.tensor]:
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Create encoder and predictor masks when collating imgs into a batch
         # 1. sample enc mask (size + location) using seed
@@ -192,7 +176,7 @@ class IJEPAMaskCollator:
             # create mask for predictor and mask to constrain range
             masks_for_predictor: List[torch.Tensor] = []
             masks_complement: List[torch.Tensor] = []
-            for _ in range(self.npred):
+            for _ in range(self.n_masks_for_predictor):
                 mask, mask_complement = self._sample_mask(
                     mask_size=mask_size_for_predictor
                 )
@@ -210,7 +194,7 @@ class IJEPAMaskCollator:
 
             # create mask for context_encoder
             masks_for_context_encoder: List[torch.Tensor] = []
-            for _ in range(self.nenc):
+            for _ in range(self.n_masks_for_context_encoder):
                 mask, _ = self._sample_mask(
                     mask_size=mask_size_for_context_encoder,
                     acceptable_regions=acceptable_regions,
