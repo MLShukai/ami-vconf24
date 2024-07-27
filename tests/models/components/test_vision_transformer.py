@@ -34,6 +34,7 @@ class TestVisionTransformer:
         use_masks: bool,
     ):
         assert image_size % patch_size == 0
+        # define encoder made of ViT
         vit = VisionTransformer(
             img_size=image_size,
             patch_size=patch_size,
@@ -42,9 +43,15 @@ class TestVisionTransformer:
             num_heads=num_heads,
             mlp_ratio=mlp_ratio,
         )
+        # define sample inputs
         images = torch.randn([batch_size, 3, image_size, image_size])
-        n_patch = image_size // patch_size
+        n_patch_vertical = image_size // patch_size
+        n_patch_horizontal = image_size // patch_size
         masks_for_context_encoder = (
-            torch.randint(0, 2, size=[batch_size, 1, n_patch * n_patch]) if use_masks else None
+            torch.randint(0, 2, size=[batch_size, 1, n_patch_vertical * n_patch_horizontal]) if use_masks else None
         )
         latent = vit(images, masks_for_context_encoder)
+        # check size of output latent
+        assert latent.size(0) == batch_size, "batch_size mismatch"
+        assert latent.size(1) == n_patch_vertical * n_patch_horizontal, "num of patch mismatch"
+        assert latent.size(2) == embed_dim, "embed_dim mismatch"
