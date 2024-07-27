@@ -5,7 +5,9 @@ from typing import List, Optional, Tuple
 import math
 import torch
 from multiprocessing import Value
+from logging import getLogger
 
+logger = getLogger()
 
 class IJEPAMaskCollator:
     def __init__(
@@ -20,6 +22,8 @@ class IJEPAMaskCollator:
         min_keep=10,
         allow_overlap=False,
     ) -> None:
+        """
+        """
         super(IJEPAMaskCollator, self).__init__()
         if not isinstance(input_size, tuple):
             input_size = (input_size,) * 2
@@ -53,10 +57,7 @@ class IJEPAMaskCollator:
         scale_range: Tuple[float, float],
         aspect_ratio_range: Tuple[float, float],
     ) -> Tuple[int, int]:
-        """Reconstruct images from latent variables. `strides` differs from
-        original implementation. For the original implementation, see
-        https://github.com/openai/large-scale-
-        curiosity/blob/master/utils.py#L147.
+        """randomly sampling mask's size.
 
         Args:
             generator (torch.Generator): Generator to make pseudo random numbers.
@@ -137,19 +138,29 @@ class IJEPAMaskCollator:
         return mask, mask_complement
 
     def __call__(
-        self, batch: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        """
-        Create encoder and predictor masks when collating imgs into a batch
-        # 1. sample enc mask (size + location) using seed
-        # 2. sample pred mask (size) using seed
-        # 3. sample several enc mask locations for each image (w/o seed)
-        # 4. sample several pred mask locations for each image (w/o seed)
-        # 5. return enc mask and pred mask
-        """
-        B = len(batch)
+        self, images: List[torch.Tensor]
+    ) -> Tuple[torch.Tensor, List[torch.Tensor], List[torch.Tensor]]:
+        """Collate input images and create masks for context_encoder and predictor.
 
-        collated_batch = torch.utils.data.default_collate(batch)
+        Args:
+            images (List[torch.Tensor]): 
+                images list. len(images)==batch_size. 
+                Each image is shape [3, height, width]
+
+        Returns:
+            Tuple[torch.Tensor, List[torch.Tensor], List[torch.Tensor]]:
+                collated_images (torch.Tensor): 
+                    Collated images (shape is [batch_size, 3, height, width])
+                collated_masks_for_context_encoder (List[torch.Tensor]):
+                    Collated mask indices patch for context encoder.
+                    (Each Tensor's shape is [batch_size, n_patch_to_keep].)
+                collated_masks_for_predictor (List[torch.Tensor]):
+                    Collated mask indices patch for predictor.
+                    (Each Tensor's shape is [batch_size, n_patch_to_keep].)
+        """
+        B = len(images)
+
+        collated_images = torch.utils.data.default_collate(images)
 
         seed = self.step()
         g = torch.Generator()
@@ -221,7 +232,7 @@ class IJEPAMaskCollator:
         )
 
         return (
-            collated_batch,
+            collated_images,
             collated_masks_for_context_encoder,
             collated_masks_for_predictor,
         )
