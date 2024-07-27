@@ -1,6 +1,7 @@
 # Ref: https://github.com/facebookresearch/ijepa
 
 import math
+from typing import List, Optional, Tuple
 import numpy as np
 
 import torch
@@ -400,7 +401,6 @@ class VisionTransformer(nn.Module):
                     drop=drop_rate,
                     attn_drop=attn_drop_rate,
                     drop_path=dpr[i],
-                    norm_layer=norm_layer,
                 )
                 for i in range(depth)
             ]
@@ -523,7 +523,6 @@ class VisionTransformerPredictor(nn.Module):
                     drop=drop_rate,
                     attn_drop=attn_drop_rate,
                     drop_path=dpr[i],
-                    norm_layer=norm_layer,
                 )
                 for i in range(depth)
             ]
