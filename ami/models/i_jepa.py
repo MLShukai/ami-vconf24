@@ -1,7 +1,7 @@
 # Ref: https://github.com/facebookresearch/ijepa
 
 import math
-from typing import List, Optional, Tuple
+from typing import Optional
 import numpy as np
 
 import torch
@@ -63,7 +63,7 @@ def repeat_interleave_batch(x: torch.Tensor, B: int, repeat: int) -> torch.Tenso
     return x
 
 
-def apply_masks(x: torch.Tensor, masks: List[torch.Tensor]) -> torch.Tensor:
+def apply_masks(x: torch.Tensor, masks: list[torch.Tensor]) -> torch.Tensor:
     """
     :param x: tensor of shape [B (batch-size), N (num-patches), D (feature-dim)]
     :param masks: list of tensors containing indices of patches in [N] to keep
@@ -96,7 +96,7 @@ def get_2d_sincos_pos_embed(
 
 
 def get_2d_sincos_pos_embed_from_grid(
-    embed_dim: int, grid: Tuple[int, int]
+    embed_dim: int, grid: tuple[int, int]
 ) -> np.ndarray:
     assert embed_dim % 2 == 0
 
@@ -285,10 +285,10 @@ class PatchEmbed(nn.Module):
         embed_dim: int = 768,
     ) -> None:
         super().__init__()
-        num_patches = (img_size // patch_size) * (img_size // patch_size)
+        n_patches = (img_size // patch_size) * (img_size // patch_size)
         self.img_size = img_size
         self.patch_size = patch_size
-        self.num_patches = num_patches
+        self.n_patches = n_patches
 
         self.proj = nn.Conv2d(
             in_channels, embed_dim, kernel_size=patch_size, stride=patch_size
@@ -337,7 +337,7 @@ class ConvEmbed(nn.Module):
 
         # Comptute the number of patches
         stride_prod = int(np.prod(strides))
-        self.num_patches = (img_size[0] // stride_prod) ** 2
+        self.n_patches = (img_size[0] // stride_prod) ** 2
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         p = self.stem(x)
@@ -416,14 +416,14 @@ class VisionTransformerEncoder(nn.Module):
             in_channels=in_channels,
             embed_dim=embed_dim,
         )
-        num_patches = self.patch_embed.num_patches
+        n_patches = self.patch_embed.n_patches
         # --
         self.pos_embed = nn.Parameter(
-            torch.zeros(1, num_patches, embed_dim), requires_grad=False
+            torch.zeros(1, n_patches, embed_dim), requires_grad=False
         )
         pos_embed = get_2d_sincos_pos_embed(
             self.pos_embed.shape[-1],
-            int(self.patch_embed.num_patches**0.5),
+            int(self.patch_embed.n_patches**0.5),
             cls_token=False,
         )
         self.pos_embed.data.copy_(torch.from_numpy(pos_embed).float().unsqueeze(0))
@@ -474,7 +474,7 @@ class VisionTransformerEncoder(nn.Module):
                 nn.init.constant_(m.bias, 0)
 
     def forward(
-        self, images: torch.Tensor, masks_for_context_encoder: Optional[List[torch.Tensor]] = None
+        self, images: torch.Tensor, masks_for_context_encoder: Optional[list[torch.Tensor]] = None
     ) -> torch.Tensor:
         """Encode input images into latents.
         
@@ -482,7 +482,7 @@ class VisionTransformerEncoder(nn.Module):
             images (torch.Tensor): 
                 Input images.
                 (shape: [batch_size, 3, img_size, img_size])
-            masks_for_context_encoder (List[torch.Tensor] | None): 
+            masks_for_context_encoder (list[torch.Tensor] | None): 
                 Masks to select indices of images embedded as patches.
                 (shape of each Tensor: [batch_size, n_patches])
                 If None, all patches are selected and used to create latents.
@@ -542,8 +542,8 @@ class VisionTransformerPredictor(nn.Module):
 
     def __init__(
         self,
-        num_patches: int,
-        embed_dim: int = 768,
+        n_patches: int,
+        context_encoder_embed_dim: int = 768,
         predictor_embed_dim: int = 384,
         depth: int = 6,
         num_heads: int = 12,
@@ -556,7 +556,7 @@ class VisionTransformerPredictor(nn.Module):
         init_std: float = 0.02,
     ) -> None:
         super().__init__()
-        self.predictor_embed = nn.Linear(embed_dim, predictor_embed_dim, bias=True)
+        self.predictor_embed = nn.Linear(context_encoder_embed_dim, predictor_embed_dim, bias=True)
         # prepare mask tokens representing patches to be predicted
         self.mask_token = nn.Parameter(torch.zeros(1, 1, predictor_embed_dim))
         dpr = [
@@ -564,10 +564,10 @@ class VisionTransformerPredictor(nn.Module):
         ]  # stochastic depth decay rule
         # --
         self.predictor_pos_embed = nn.Parameter(
-            torch.zeros(1, num_patches, predictor_embed_dim), requires_grad=False
+            torch.zeros(1, n_patches, predictor_embed_dim), requires_grad=False
         )
         predictor_pos_embed = get_2d_sincos_pos_embed(
-            self.predictor_pos_embed.shape[-1], int(num_patches**0.5), cls_token=False
+            self.predictor_pos_embed.shape[-1], int(n_patches**0.5), cls_token=False
         )
         self.predictor_pos_embed.data.copy_(
             torch.from_numpy(predictor_pos_embed).float().unsqueeze(0)
@@ -589,7 +589,7 @@ class VisionTransformerPredictor(nn.Module):
             ]
         )
         self.predictor_norm = nn.LayerNorm(predictor_embed_dim, eps=1e-6)
-        self.predictor_proj = nn.Linear(predictor_embed_dim, embed_dim, bias=True)
+        self.predictor_proj = nn.Linear(predictor_embed_dim, context_encoder_embed_dim, bias=True)
         # ------
         self.init_std = init_std
         trunc_normal_(self.mask_token, std=self.init_std)
@@ -620,19 +620,19 @@ class VisionTransformerPredictor(nn.Module):
     def forward(
         self,
         latents: torch.Tensor,
-        masks_for_context_encoder: List[torch.Tensor],
-        masks_for_predictor: List[torch.Tensor],
+        masks_for_context_encoder: list[torch.Tensor],
+        masks_for_predictor: list[torch.Tensor],
     ) -> torch.Tensor:
         """Predict latents of patches at the position specified by masks_for_predictor with a hint of input latents and positional information (masks_for_context_encoder).
         
         Args:
             latents (torch.Tensor): 
                 Input latents from context_encoder. 
-                (shape: [batch_size, n_patches_used_in_context_encoder, embed_dim])
-            masks_for_context_encoder (List[torch.Tensor]): 
+                (shape: [batch_size, n_patches_selected_in_context_encoder, context_encoder_embed_dim])
+            masks_for_context_encoder (list[torch.Tensor]): 
                 Masks used to create input latents above using context_encoder.
-                (shape of each Tensor: [batch_size, n_patches_used_in_context_encoder])
-            masks_for_predictor (List[torch.Tensor]):
+                (shape of each Tensor: [batch_size, n_patches_selected_in_context_encoder])
+            masks_for_predictor (list[torch.Tensor]):
                 Masks corresponding to the position of the patches to be predict.
                 (shape of each Tensor: [batch_size, n_patches_to_predict])
 
