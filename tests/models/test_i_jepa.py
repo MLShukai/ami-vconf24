@@ -12,7 +12,7 @@ from ami.models.i_jepa import (
 
 class TestVisionTransformer:
     
-    def _make_masks(self, n_mask: int, batch_size: int, n_patch_max: int) -> tuple[list[torch.Tensor], int]:
+    def _make_masks(self, n_mask: int, batch_size: int, n_patch_max: int) -> list[torch.Tensor]:
         masks: list[torch.Tensor] = []
         n_patch = random.randrange(n_patch_max)
         for _ in range(n_mask):
@@ -21,7 +21,7 @@ class TestVisionTransformer:
                 m_indices, _ = torch.randperm(n_patch_max)[:n_patch].sort()
                 m.append(m_indices)
             masks.append(torch.stack(m, dim=0))
-        return masks, n_patch
+        return masks
 
     # model params
     @pytest.mark.parametrize("image_size", [224])

@@ -281,7 +281,7 @@ class PatchEmbed(nn.Module):
         self,
         img_size: int = 224,
         patch_size: int = 16,
-        in_chans: int = 3,
+        in_channels: int = 3,
         embed_dim: int = 768,
     ) -> None:
         super().__init__()
@@ -291,11 +291,10 @@ class PatchEmbed(nn.Module):
         self.num_patches = num_patches
 
         self.proj = nn.Conv2d(
-            in_chans, embed_dim, kernel_size=patch_size, stride=patch_size
+            in_channels, embed_dim, kernel_size=patch_size, stride=patch_size
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        B, C, H, W = x.shape
         x = self.proj(x).flatten(2).transpose(1, 2)
         return x
 
@@ -310,13 +309,13 @@ class ConvEmbed(nn.Module):
         channels: int,
         strides: int,
         img_size: int = 224,
-        in_chans: int = 3,
+        in_channels: int = 3,
         batch_norm: bool = True,
     ) -> None:
         super().__init__()
         # Build the stems
         stem = []
-        channels = [in_chans] + channels
+        channels = [in_channels] + channels
         for i in range(len(channels) - 2):
             stem += [
                 nn.Conv2d(
@@ -346,16 +345,15 @@ class ConvEmbed(nn.Module):
 
 
 class VisionTransformerEncoder(nn.Module):
-    """Vision Transformer"""
+    """Used as I-JEPA context_encoder and target_encoder"""
 
     def __init__(
         self,
         img_size: int = 224,
         patch_size: int = 16,
-        in_chans: int = 3,
+        in_channels: int = 3,
         embed_dim: int = 768,
         depth: int = 12,
-        predictor_depth: int = 12,
         num_heads: int = 12,
         mlp_ratio: float = 4.0,
         qkv_bias: bool = True,
@@ -365,6 +363,49 @@ class VisionTransformerEncoder(nn.Module):
         drop_path_rate: float = 0.0,
         init_std: float = 0.02,
     ) -> None:
+        """Used as I-JEPA context_encoder and target_encoder.
+
+        Args:
+            img_size (int):
+                Input image size. 
+                Defaults to 224.
+            patch_size (int):
+                Pixel size per a patch. 
+                Defaults to 16.
+            in_channels (int):
+                Input images channels. 
+                Defaults to 3.
+            embed_dim (int):
+                Output dims per a patch. 
+                Defaults to 768.
+            depth (int): 
+                Num of transformer layers. 
+                Defaults to 12.
+            num_heads (int): 
+                Num of heads for transformer layers. 
+                Defaults to 12.
+            mlp_ratio (float): 
+                Specify hidden dims for transformer layers. 
+                Defaults to 4.0.
+            qkv_bias (bool): 
+                Whether to use bias in MLPs used to get qkv in attention module. 
+                Defaults to True.
+            qk_scale (Optional[float]):
+                The multiplier to be applied to the matrix product of q and v in attention module. 
+                Defaults to None.
+            drop_rate (float): 
+                Ratio of Dropout to be performed within last MLP in each transformer layers. 
+                Defaults to 0.0.
+            attn_drop_rate (float): 
+                Ratio of Dropout to be performed within MLP for the matrix product of q and k in attention module. 
+                Defaults to 0.0.
+            drop_path_rate (float): 
+                Maximum value of stochastic depth decay rule.
+                Defaults to 0.0.
+            init_std (float): 
+                Std for initializing each layer.
+                Defaults to 0.02.
+        """
         super().__init__()
         self.num_features = self.embed_dim = embed_dim
         self.num_heads = num_heads
@@ -372,7 +413,7 @@ class VisionTransformerEncoder(nn.Module):
         self.patch_embed = PatchEmbed(
             img_size=img_size,
             patch_size=patch_size,
-            in_chans=in_chans,
+            in_channels=in_channels,
             embed_dim=embed_dim,
         )
         num_patches = self.patch_embed.num_patches
@@ -433,11 +474,30 @@ class VisionTransformerEncoder(nn.Module):
                 nn.init.constant_(m.bias, 0)
 
     def forward(
-        self, x: torch.Tensor, masks_for_context_encoder: Optional[List[torch.Tensor]] = None
+        self, images: torch.Tensor, masks_for_context_encoder: Optional[List[torch.Tensor]] = None
     ) -> torch.Tensor:
-        # -- patchify x
-        x = self.patch_embed(x)
-        B, N, D = x.shape
+        """Encode input images into latents.
+        
+        Args:
+            images (torch.Tensor): 
+                Input images.
+                (shape: [batch_size, 3, img_size, img_size])
+            masks_for_context_encoder (List[torch.Tensor] | None): 
+                Masks to select indices of images embedded as patches.
+                (shape of each Tensor: [batch_size, n_patches])
+                If None, all patches are selected and used to create latents.
+                Default to None.
+
+        Returns:
+            torch.Tensor:
+                if masks_for_context_encoder is None:
+                    shape: [batch_size, n_patches, embed_dim]
+                else:
+                    shape: [batch_size*len(masks_for_context_encoder), n_patches, embed_dim]
+        """
+        # patchify input images
+        x = self.patch_embed(images)
+        _, N, D = x.shape
 
         # -- add positional embedding to x
         pos_embed = self.interpolate_pos_encoding(x, self.pos_embed)
@@ -448,7 +508,7 @@ class VisionTransformerEncoder(nn.Module):
             x = apply_masks(x, masks_for_context_encoder)
 
         # -- fwd prop
-        for i, blk in enumerate(self.blocks):
+        for blk in self.blocks:
             x = blk(x)
 
         if self.norm is not None:
@@ -478,7 +538,7 @@ class VisionTransformerEncoder(nn.Module):
 
 
 class VisionTransformerPredictor(nn.Module):
-    """Vision Transformer"""
+    """Used as I-JEPA predictor"""
 
     def __init__(
         self,
@@ -497,6 +557,7 @@ class VisionTransformerPredictor(nn.Module):
     ) -> None:
         super().__init__()
         self.predictor_embed = nn.Linear(embed_dim, predictor_embed_dim, bias=True)
+        # prepare mask tokens representing patches to be predicted
         self.mask_token = nn.Parameter(torch.zeros(1, 1, predictor_embed_dim))
         dpr = [
             x.item() for x in torch.linspace(0, drop_path_rate, depth)
@@ -558,43 +619,61 @@ class VisionTransformerPredictor(nn.Module):
 
     def forward(
         self,
-        x: torch.Tensor,
+        latents: torch.Tensor,
         masks_for_context_encoder: List[torch.Tensor],
         masks_for_predictor: List[torch.Tensor],
     ) -> torch.Tensor:
+        """Predict latents of patches at the position specified by masks_for_predictor with a hint of input latents and positional information (masks_for_context_encoder).
+        
+        Args:
+            latents (torch.Tensor): 
+                Input latents from context_encoder. 
+                (shape: [batch_size, n_patches_used_in_context_encoder, embed_dim])
+            masks_for_context_encoder (List[torch.Tensor]): 
+                Masks used to create input latents above using context_encoder.
+                (shape of each Tensor: [batch_size, n_patches_used_in_context_encoder])
+            masks_for_predictor (List[torch.Tensor]):
+                Masks corresponding to the position of the patches to be predict.
+                (shape of each Tensor: [batch_size, n_patches_to_predict])
+
+        Returns:
+            torch.Tensor: 
+                prediction results.
+                (shape: )
+        """
         assert (masks_for_predictor is not None) and (
             masks_for_context_encoder is not None
         ), "Cannot run predictor without mask indices"
 
-        # -- Batch Size
-        B = len(x) // len(masks_for_context_encoder)
+        batch_size = len(latents) // len(masks_for_context_encoder)
 
-        # -- map from encoder-dim to pedictor-dim
-        x = self.predictor_embed(x)
+        # map from encoder-dim to pedictor-dim
+        x = self.predictor_embed(latents)
 
-        # -- add positional embedding to x tokens
-        x_pos_embed = self.predictor_pos_embed.repeat(B, 1, 1)
+        # add positional embedding correspond to context_encoder
+        x_pos_embed = self.predictor_pos_embed.repeat(batch_size, 1, 1)
         x += apply_masks(x_pos_embed, masks_for_context_encoder)
 
         _, N_ctxt, D = x.shape
 
-        # -- concat mask tokens to x
-        pos_embs = self.predictor_pos_embed.repeat(B, 1, 1)
+        # prepare positional embedding for patches to be predicted
+        pos_embs = self.predictor_pos_embed.repeat(batch_size, 1, 1)
         pos_embs = apply_masks(pos_embs, masks_for_predictor)
-        pos_embs = repeat_interleave_batch(pos_embs, B, repeat=len(masks_for_context_encoder))
-        # --
+        pos_embs = repeat_interleave_batch(pos_embs, batch_size, repeat=len(masks_for_context_encoder))
+        # prepare mask tokens for patch to be predicted
         pred_tokens = self.mask_token.repeat(pos_embs.size(0), pos_embs.size(1), 1)
-        # --
+        # add positional embedding
         pred_tokens += pos_embs
+        # concat x with patches to be predicted
         x = x.repeat(len(masks_for_predictor), 1, 1)
         x = torch.cat([x, pred_tokens], dim=1)
 
-        # -- fwd prop
+        # apply blocks
         for blk in self.predictor_blocks:
             x = blk(x)
         x = self.predictor_norm(x)
 
-        # -- return preds for mask tokens
+        # return predictions for mask tokens
         x = x[:, N_ctxt:]
         x = self.predictor_proj(x)
 
