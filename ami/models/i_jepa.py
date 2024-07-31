@@ -167,7 +167,7 @@ class DropPath(nn.Module):
 
     def __init__(self, drop_prob: float):
         super().__init__()
-        assert drop_path > 0.0
+        assert drop_prob > 0.0
         self.drop_prob = drop_prob
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -217,7 +217,7 @@ class Attention(nn.Module):
         self.proj = nn.Linear(dim, dim)
         self.proj_drop = nn.Dropout(proj_drop)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         B, N, C = x.shape
         qkv = self.qkv(x).reshape(B, N, 3, self.num_heads, C // self.num_heads).permute(2, 0, 3, 1, 4)
         q, k, v = qkv[0], qkv[1], qkv[2]
@@ -294,47 +294,6 @@ class PatchEmbed(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.proj(x).flatten(2).transpose(1, 2)
         return x
-
-
-class ConvEmbed(nn.Module):
-    """3x3 Convolution stems for ViT following ViTC models."""
-
-    def __init__(
-        self,
-        channels: int,
-        strides: int,
-        img_size: int = 224,
-        in_channels: int = 3,
-        batch_norm: bool = True,
-    ) -> None:
-        super().__init__()
-        # Build the stems
-        stem = []
-        channels = [in_channels] + channels
-        for i in range(len(channels) - 2):
-            stem += [
-                nn.Conv2d(
-                    channels[i],
-                    channels[i + 1],
-                    kernel_size=3,
-                    stride=strides[i],
-                    padding=1,
-                    bias=(not batch_norm),
-                )
-            ]
-            if batch_norm:
-                stem += [nn.BatchNorm2d(channels[i + 1])]
-            stem += [nn.ReLU(inplace=True)]
-        stem += [nn.Conv2d(channels[-2], channels[-1], kernel_size=1, stride=strides[-1])]
-        self.stem = nn.Sequential(*stem)
-
-        # Comptute the number of patches
-        stride_prod = int(np.prod(strides))
-        self.n_patches = (img_size[0] // stride_prod) ** 2
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        p = self.stem(x)
-        return p.flatten(2).transpose(1, 2)
 
 
 class VisionTransformerEncoder(nn.Module):
@@ -442,7 +401,7 @@ class VisionTransformerEncoder(nn.Module):
         self.fix_init_weight()
 
     def fix_init_weight(self) -> None:
-        def rescale(param, layer_id):
+        def rescale(param: torch.Tensor, layer_id: int) -> None:
             param.div_(math.sqrt(2.0 * layer_id))
 
         for layer_id, layer in enumerate(self.blocks):
@@ -616,7 +575,7 @@ class VisionTransformerPredictor(nn.Module):
         self.fix_init_weight()
 
     def fix_init_weight(self) -> None:
-        def rescale(param, layer_id):
+        def rescale(param: torch.Tensor, layer_id: int) -> None:
             param.div_(math.sqrt(2.0 * layer_id))
 
         for layer_id, layer in enumerate(self.predictor_blocks):
