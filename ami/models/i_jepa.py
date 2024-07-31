@@ -403,7 +403,7 @@ class VisionTransformerEncoder(nn.Module):
                 Maximum value of stochastic depth decay rule.
                 Defaults to 0.0.
             init_std (float): 
-                Std for initializing each layer.
+                Std for initializing layers.
                 Defaults to 0.02.
         """
         super().__init__()
@@ -555,6 +555,46 @@ class VisionTransformerPredictor(nn.Module):
         drop_path_rate: float = 0.0,
         init_std: float = 0.02,
     ) -> None:
+        """Used as I-JEPA predictor
+
+        Args:
+            n_patches (int):
+                Total num of patches.
+            context_encoder_embed_dim (int):
+                Embedding dim of input latents.
+                Defaults to 768.
+            predictor_embed_dim (int): 
+                Convert the input dimension to this dimension for prediction.
+                Defaults to 384.
+            depth (int): 
+                Num of transformer layers. 
+                Defaults to 6.
+            num_heads (int): 
+                Num of heads for transformer layers. 
+                Defaults to 12.
+            mlp_ratio (float): 
+                Specify hidden dims for transformer layers. 
+                Defaults to 4.0.
+            qkv_bias (bool): 
+                Whether to use bias in MLPs used to get qkv in attention module. 
+                Defaults to True.
+            qk_scale (Optional[float]): 
+                The multiplier to be applied to the matrix product of q and v in attention module. 
+                Defaults to None.
+            drop_rate (float): 
+                Ratio of Dropout to be performed within last MLP in each transformer layers. 
+                Defaults to 0.0.
+            attn_drop_rate (float):
+                Ratio of Dropout to be performed within MLP for the matrix product of q and k in attention module. 
+                Defaults to 0.0.
+            drop_path_rate (float): 
+                Maximum value of stochastic depth decay rule.
+                Defaults to 0.0.
+            init_std (float): 
+                Std for initializing layers.
+                Defaults to 0.02.
+        """
+
         super().__init__()
         self.predictor_embed = nn.Linear(context_encoder_embed_dim, predictor_embed_dim, bias=True)
         # prepare mask tokens representing patches to be predicted
@@ -639,7 +679,7 @@ class VisionTransformerPredictor(nn.Module):
         Returns:
             torch.Tensor: 
                 prediction results.
-                (shape: )
+                (shape: [batch_size*len(masks_for_predictor), n_patches_to_predict, context_encoder_embed_dim])
         """
         assert (masks_for_predictor is not None) and (
             masks_for_context_encoder is not None
