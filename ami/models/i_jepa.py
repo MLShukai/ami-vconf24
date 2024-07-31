@@ -4,6 +4,7 @@ import math
 from typing import Optional
 
 import numpy as np
+import numpy.typing as npt
 import torch
 import torch.nn as nn
 
@@ -87,7 +88,9 @@ def apply_masks(x: torch.Tensor, masks: list[torch.Tensor]) -> torch.Tensor:
     return torch.cat(selected_x, dim=0)
 
 
-def get_2d_sincos_pos_embed(embed_dim: int, grid_size: int, cls_token: bool = False) -> np.ndarray:
+def get_2d_sincos_pos_embed(
+    embed_dim: int, grid_size: int, cls_token: bool = False
+) -> npt.NDArray[np.float64]:
     """
     grid_size: int of the grid height and width
     return:
@@ -97,7 +100,7 @@ def get_2d_sincos_pos_embed(embed_dim: int, grid_size: int, cls_token: bool = Fa
     grid_w = np.arange(grid_size, dtype=float)
     grid = np.meshgrid(grid_w, grid_h)  # here w goes first
     grid = np.stack(grid, axis=0)
-
+    
     grid = grid.reshape([2, 1, grid_size, grid_size])
     pos_embed = get_2d_sincos_pos_embed_from_grid(embed_dim, grid)
     if cls_token:
@@ -105,7 +108,9 @@ def get_2d_sincos_pos_embed(embed_dim: int, grid_size: int, cls_token: bool = Fa
     return pos_embed
 
 
-def get_2d_sincos_pos_embed_from_grid(embed_dim: int, grid: tuple[int, int]) -> np.ndarray:
+def get_2d_sincos_pos_embed_from_grid(
+    embed_dim: int, grid: tuple[int, int]
+) -> npt.NDArray[np.float64]:
     assert embed_dim % 2 == 0
 
     # use half of dimensions to encode grid_h
@@ -116,20 +121,9 @@ def get_2d_sincos_pos_embed_from_grid(embed_dim: int, grid: tuple[int, int]) -> 
     return emb
 
 
-def get_1d_sincos_pos_embed(embed_dim: int, grid_size: int, cls_token=False) -> np.ndarray:
-    """
-    grid_size: int of the grid length
-    return:
-    pos_embed: [grid_size, embed_dim] or [1+grid_size, embed_dim] (w/ or w/o cls_token)
-    """
-    grid = np.arange(grid_size, dtype=float)
-    pos_embed = get_1d_sincos_pos_embed_from_grid(embed_dim, grid)
-    if cls_token:
-        pos_embed = np.concatenate([np.zeros([1, embed_dim]), pos_embed], axis=0)
-    return pos_embed
-
-
-def get_1d_sincos_pos_embed_from_grid(embed_dim: int, pos: np.ndarray) -> np.ndarray:
+def get_1d_sincos_pos_embed_from_grid(
+    embed_dim: int, pos: npt.NDArray[np.float64]
+) -> npt.NDArray[np.float64]:
     """
     embed_dim: output dimension for each position
     pos: a list of positions to be encoded: size (M,)
