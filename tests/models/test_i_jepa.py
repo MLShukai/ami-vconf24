@@ -1,20 +1,14 @@
-import pytest
-import torch
 import random
-
 from typing import Optional
 
-from ami.models.i_jepa import (
-    VisionTransformerEncoder,
-    VisionTransformerPredictor,
-)
+import pytest
+import torch
+
+from ami.models.i_jepa import VisionTransformerEncoder, VisionTransformerPredictor
 
 
 class TestVisionTransformer:
-    
-    def _make_masks(
-        self, n_mask: int, batch_size: int, n_patches_max: int
-    ) -> tuple[list[torch.Tensor], int]:
+    def _make_masks(self, n_mask: int, batch_size: int, n_patches_max: int) -> tuple[list[torch.Tensor], int]:
         """mask maker for following tests.
 
         Args:
@@ -23,7 +17,7 @@ class TestVisionTransformer:
             n_patches_max (int): Maximum num of patches to be selected.
 
         Returns:
-            tuple[list[torch.Tensor], int]: 
+            tuple[list[torch.Tensor], int]:
                 1. Masks (len==n_mask, each shape of Tensor: [batch_size, n_patches_selected])
                 2. n_patches_selected. Randomly got from the range [1, n_patches_max).
         """
@@ -75,32 +69,28 @@ class TestVisionTransformer:
         images = torch.randn([batch_size, 3, image_size, image_size])
         n_patch_vertical = image_size // patch_size
         n_patch_horizontal = image_size // patch_size
-        n_patches_max = n_patch_vertical*n_patch_horizontal
+        n_patches_max = n_patch_vertical * n_patch_horizontal
         # make masks for encoder
         masks_for_context_encoder = None
         if isinstance(n_masks_for_encoder, int):
-            masks_for_context_encoder, n_patches_selected = self._make_masks(n_mask=n_masks_for_encoder, batch_size=batch_size, n_patches_max=n_patches_max) 
+            masks_for_context_encoder, n_patches_selected = self._make_masks(
+                n_mask=n_masks_for_encoder, batch_size=batch_size, n_patches_max=n_patches_max
+            )
         # get latents
         latent = encoder(images, masks_for_context_encoder)
         # check size of output latent
-        expected_batch_size = (
-            batch_size*n_masks_for_encoder
-            if isinstance(n_masks_for_encoder, int) 
-            else batch_size
-        )
+        expected_batch_size = batch_size * n_masks_for_encoder if isinstance(n_masks_for_encoder, int) else batch_size
         assert latent.size(0) == expected_batch_size, "batch_size mismatch"
         expected_n_patch = (
-            n_patches_selected
-            if isinstance(n_masks_for_encoder, int) 
-            else n_patch_vertical * n_patch_horizontal
+            n_patches_selected if isinstance(n_masks_for_encoder, int) else n_patch_vertical * n_patch_horizontal
         )
         assert latent.size(1) == expected_n_patch, "num of patch mismatch"
         assert latent.size(2) == embed_dim, "embed_dim mismatch"
-    
+
     # model params
     @pytest.mark.parametrize("image_size", [224])
     @pytest.mark.parametrize("patch_size", [16])
-    @pytest.mark.parametrize("context_encoder_embed_dim",[192, 384])
+    @pytest.mark.parametrize("context_encoder_embed_dim", [192, 384])
     @pytest.mark.parametrize("predictor_embed_dim", [384])
     @pytest.mark.parametrize("depth", [12, 16])
     @pytest.mark.parametrize("num_heads", [3, 6])
@@ -120,10 +110,10 @@ class TestVisionTransformer:
         n_masks_for_context_encoder: int,
         n_masks_for_predictor: int,
     ):
-        assert image_size % patch_size==0
+        assert image_size % patch_size == 0
         n_patch_vertical = image_size // patch_size
         n_patch_horizontal = image_size // patch_size
-        n_patches = n_patch_vertical*n_patch_horizontal
+        n_patches = n_patch_vertical * n_patch_horizontal
         # define encoder made of ViT
         predictor = VisionTransformerPredictor(
             n_patches=n_patches,
@@ -134,9 +124,13 @@ class TestVisionTransformer:
         )
         # define sample inputs
         n_patches_max = n_patches
-        masks_for_context_encoder, n_patches_selected_for_context_encoder = self._make_masks(n_mask=n_masks_for_context_encoder, batch_size=batch_size, n_patches_max=n_patches_max) 
+        masks_for_context_encoder, n_patches_selected_for_context_encoder = self._make_masks(
+            n_mask=n_masks_for_context_encoder, batch_size=batch_size, n_patches_max=n_patches_max
+        )
         latents = torch.randn([batch_size, n_patches_selected_for_context_encoder, context_encoder_embed_dim])
-        masks_for_predictor, n_patches_selected_for_predictor = self._make_masks(n_mask=n_masks_for_predictor, batch_size=batch_size, n_patches_max=n_patches_max) 
+        masks_for_predictor, n_patches_selected_for_predictor = self._make_masks(
+            n_mask=n_masks_for_predictor, batch_size=batch_size, n_patches_max=n_patches_max
+        )
         # get predictions
         predictions = predictor(
             latents=latents,
@@ -144,6 +138,6 @@ class TestVisionTransformer:
             masks_for_predictor=masks_for_predictor,
         )
         # check size of output latent
-        assert predictions.size(0) == batch_size*n_masks_for_predictor, "batch_size mismatch"
+        assert predictions.size(0) == batch_size * n_masks_for_predictor, "batch_size mismatch"
         assert predictions.size(1) == n_patches_selected_for_predictor, "num of patch mismatch"
         assert predictions.size(2) == context_encoder_embed_dim, "embed_dim mismatch"
