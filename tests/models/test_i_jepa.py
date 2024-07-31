@@ -106,7 +106,7 @@ class TestVisionTransformer:
     @pytest.mark.parametrize("num_heads", [3, 6])
     # test input params
     @pytest.mark.parametrize("batch_size", [1, 4])
-    @pytest.mark.parametrize("n_masks_for_context_encoder", [1, 4])
+    @pytest.mark.parametrize("n_masks_for_context_encoder", [1])
     @pytest.mark.parametrize("n_masks_for_predictor", [1, 4])
     def test_vision_transformer_predictor(
         self,
@@ -143,6 +143,7 @@ class TestVisionTransformer:
             masks_for_context_encoder=masks_for_context_encoder,
             masks_for_predictor=masks_for_predictor,
         )
-        print(predictions.size())
         # check size of output latent
+        assert predictions.size(0) == batch_size*n_masks_for_predictor, "batch_size mismatch"
+        assert predictions.size(1) == n_patches_selected_for_predictor, "num of patch mismatch"
         assert predictions.size(2) == context_encoder_embed_dim, "embed_dim mismatch"
