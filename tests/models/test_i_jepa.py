@@ -6,31 +6,30 @@ import torch
 
 from ami.models.i_jepa import VisionTransformerEncoder, VisionTransformerPredictor
 
+def _make_masks_randomly(n_mask: int, batch_size: int, n_patches_max: int) -> tuple[list[torch.Tensor], int]:
+    """mask maker for following tests.
+
+    Args:
+        n_mask (int): Num of mask to be made.
+        batch_size (int): Batch size.
+        n_patches_max (int): Maximum num of patches to be selected.
+
+    Returns:
+        tuple[list[torch.Tensor], int]:
+            1. Masks (len==n_mask, each shape of Tensor: [batch_size, n_patches_selected])
+            2. n_patches_selected. Randomly got from the range [1, n_patches_max).
+    """
+    masks: list[torch.Tensor] = []
+    n_patches_selected = random.randrange(n_patches_max)
+    for _ in range(n_mask):
+        m = []
+        for _ in range(batch_size):
+            m_indices, _ = torch.randperm(n_patches_max)[:n_patches_selected].sort()
+            m.append(m_indices)
+        masks.append(torch.stack(m, dim=0))
+    return masks, n_patches_selected
 
 class TestVisionTransformer:
-    def _make_masks(self, n_mask: int, batch_size: int, n_patches_max: int) -> tuple[list[torch.Tensor], int]:
-        """mask maker for following tests.
-
-        Args:
-            n_mask (int): Num of mask to be made.
-            batch_size (int): Batch size.
-            n_patches_max (int): Maximum num of patches to be selected.
-
-        Returns:
-            tuple[list[torch.Tensor], int]:
-                1. Masks (len==n_mask, each shape of Tensor: [batch_size, n_patches_selected])
-                2. n_patches_selected. Randomly got from the range [1, n_patches_max).
-        """
-        masks: list[torch.Tensor] = []
-        n_patches_selected = random.randrange(n_patches_max)
-        for _ in range(n_mask):
-            m = []
-            for _ in range(batch_size):
-                m_indices, _ = torch.randperm(n_patches_max)[:n_patches_selected].sort()
-                m.append(m_indices)
-            masks.append(torch.stack(m, dim=0))
-        return masks, n_patches_selected
-
     # model params
     @pytest.mark.parametrize("image_size", [224])
     @pytest.mark.parametrize("patch_size", [16])
@@ -73,7 +72,7 @@ class TestVisionTransformer:
         # make masks for encoder
         masks_for_context_encoder = None
         if isinstance(n_masks_for_encoder, int):
-            masks_for_context_encoder, n_patches_selected = self._make_masks(
+            masks_for_context_encoder, n_patches_selected = _make_masks_randomly(
                 n_mask=n_masks_for_encoder, batch_size=batch_size, n_patches_max=n_patches_max
             )
         # get latents
@@ -124,11 +123,11 @@ class TestVisionTransformer:
         )
         # define sample inputs
         n_patches_max = n_patches
-        masks_for_context_encoder, n_patches_selected_for_context_encoder = self._make_masks(
+        masks_for_context_encoder, n_patches_selected_for_context_encoder = _make_masks_randomly(
             n_mask=n_masks_for_context_encoder, batch_size=batch_size, n_patches_max=n_patches_max
         )
         latents = torch.randn([batch_size, n_patches_selected_for_context_encoder, context_encoder_embed_dim])
-        masks_for_predictor, n_patches_selected_for_predictor = self._make_masks(
+        masks_for_predictor, n_patches_selected_for_predictor = _make_masks_randomly(
             n_mask=n_masks_for_predictor, batch_size=batch_size, n_patches_max=n_patches_max
         )
         # get predictions
