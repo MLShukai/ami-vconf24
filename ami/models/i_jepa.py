@@ -9,10 +9,10 @@ import torch.nn as nn
 
 
 def _no_grad_trunc_normal_(
-    tensor: torch.Tensor, 
-    mean: float, 
-    std: float, 
-    lower: float, 
+    tensor: torch.Tensor,
+    mean: float,
+    std: float,
+    lower: float,
     upper: float,
 ) -> torch.Tensor:
     # Cut & paste from PyTorch official master until it's in a few official releases - RW

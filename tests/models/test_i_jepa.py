@@ -6,7 +6,12 @@ import torch
 
 from ami.models.i_jepa import VisionTransformerEncoder, VisionTransformerPredictor
 
-def _make_masks_randomly(n_mask: int, batch_size: int, n_patches_max: int) -> tuple[list[torch.Tensor], int]:
+
+def _make_masks_randomly(
+    n_mask: int,
+    batch_size: int,
+    n_patches_max: int,
+) -> tuple[list[torch.Tensor], int]:
     """mask maker for following tests.
 
     Args:
@@ -28,6 +33,7 @@ def _make_masks_randomly(n_mask: int, batch_size: int, n_patches_max: int) -> tu
             m.append(m_indices)
         masks.append(torch.stack(m, dim=0))
     return masks, n_patches_selected
+
 
 class TestVisionTransformer:
     # model params
