@@ -25,6 +25,7 @@ def trunc_normal_(
     def norm_cdf(x: float) -> float:
         # Computes standard normal cumulative distribution function
         return (1.0 + math.erf(x / math.sqrt(2.0))) / 2.0
+
     lower_cdf = norm_cdf((lower - mean) / std)
     upper_cdf = norm_cdf((upper - mean) / std)
 
@@ -42,7 +43,7 @@ def trunc_normal_(
 
     # Clamp to ensure it's in the proper range
     tensor.clamp_(min=lower, max=upper)
-    return tensor 
+    return tensor
 
 
 def repeat_interleave_batch(x: torch.Tensor, batch_size: int, repeat: int) -> torch.Tensor:
@@ -143,13 +144,14 @@ class DropPath(nn.Module):
         if not self.training:
             return x
         shape = (x.shape[0],) + (1,) * (x.ndim - 1)  # work with diff dim tensors, not just 2D ConvNets
-        random_tensor =  torch.rand(shape, device=x.device) >= self.drop_prob
+        random_tensor = torch.rand(shape, device=x.device) >= self.drop_prob
         output = x.div(1 - self.drop_prob) * random_tensor
         return output
 
 
 class MLP(nn.Module):
-    """Multi Layer Perceptron"""
+    """Multi Layer Perceptron."""
+
     def __init__(
         self,
         in_features: int,
@@ -187,7 +189,7 @@ class Attention(nn.Module):
         head_dim = dim // num_heads
         if qk_scale is None:
             qk_scale = head_dim**-0.5
-        assert qk_scale !=  0.0
+        assert qk_scale != 0.0
         self.scale = qk_scale
 
         self.qkv = nn.Linear(dim, dim * 3, bias=qkv_bias)
@@ -355,7 +357,7 @@ class VisionTransformerEncoder(nn.Module):
         )
         self.pos_embed.data.copy_(torch.from_numpy(pos_embed).float().unsqueeze(0))
         # define transformers
-        dpr = np.linspace(0, drop_path_rate, depth).tolist() # stochastic depth decay rule
+        dpr = np.linspace(0, drop_path_rate, depth).tolist()  # stochastic depth decay rule
         self.transformer_encoders = nn.ModuleList(
             [
                 TransformerEncoder(
@@ -554,7 +556,7 @@ class VisionTransformerPredictor(nn.Module):
     def fix_init_weight(self) -> None:
         def rescale(param: torch.Tensor, layer_id: int) -> None:
             param.div_(math.sqrt(2.0 * layer_id))
-        
+
         for layer_id, layer in enumerate(self.predictor_transformer_encoders, start=1):
             rescale(layer.attn.proj.weight.data, layer_id)
             rescale(layer.mlp.fc2.weight.data, layer_id)
