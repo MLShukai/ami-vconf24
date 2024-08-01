@@ -141,12 +141,12 @@ class DropPath(nn.Module):
         self.drop_prob = drop_prob
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-            if not self.training:
-                return x
-            shape = (x.shape[0],) + (1,) * (x.ndim - 1)  # work with diff dim tensors, not just 2D ConvNets
-            random_tensor =  torch.rand(shape, device=x.device) >= self.drop_prob
-            output = x.div(1 - drop_prob) * random_tensor
-            return output
+        if not self.training:
+            return x
+        shape = (x.shape[0],) + (1,) * (x.ndim - 1)  # work with diff dim tensors, not just 2D ConvNets
+        random_tensor =  torch.rand(shape, device=x.device) >= self.drop_prob
+        output = x.div(1 - self.drop_prob) * random_tensor
+        return output
 
 
 class MLP(nn.Module):
