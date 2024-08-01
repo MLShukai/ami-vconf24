@@ -54,7 +54,7 @@ def repeat_interleave_batch(x: torch.Tensor, batch_size: int, repeat: int) -> to
     return x
 
 
-def apply_masks(x: torch.Tensor, masks: list[torch.Tensor]) -> torch.Tensor:
+def select_mask_patches(x: torch.Tensor, masks: list[torch.Tensor]) -> torch.Tensor:
     """Extract patches from x using masks.
 
     Args:
@@ -210,7 +210,7 @@ class Attention(nn.Module):
         return x, attn
 
 
-class Block(nn.Module):
+class TransformerEncoder(nn.Module):
     def __init__(
         self,
         dim: int,
@@ -356,9 +356,9 @@ class VisionTransformerEncoder(nn.Module):
         self.pos_embed.data.copy_(torch.from_numpy(pos_embed).float().unsqueeze(0))
         # define transformers
         dpr = np.linspace(0, drop_path_rate, depth).tolist() # stochastic depth decay rule
-        self.blocks = nn.ModuleList(
+        self.transformer_encoders = nn.ModuleList(
             [
-                Block(
+                TransformerEncoder(
                     dim=embed_dim,
                     num_heads=num_heads,
                     mlp_ratio=mlp_ratio,
@@ -381,7 +381,7 @@ class VisionTransformerEncoder(nn.Module):
         def rescale(param: torch.Tensor, layer_id: int) -> None:
             param.div_(math.sqrt(2.0 * layer_id))
 
-        for layer_id, layer in enumerate(self.blocks, start=1):
+        for layer_id, layer in enumerate(self.transformer_encoders, start=1):
             rescale(layer.attn.proj.weight.data, layer_id)
             rescale(layer.mlp.fc2.weight.data, layer_id)
 
@@ -431,11 +431,11 @@ class VisionTransformerEncoder(nn.Module):
 
         # Extract patches from x based on indices contained in masks_for_context_encoder
         if masks_for_context_encoder is not None:
-            x = apply_masks(x, masks_for_context_encoder)
+            x = select_mask_patches(x, masks_for_context_encoder)
 
         # Apply Transformers
-        for blk in self.blocks:
-            x = blk(x)
+        for transformer_encoder in self.transformer_encoders:
+            x = transformer_encoder(x)
 
         x = self.norm(x)
 
@@ -528,9 +528,9 @@ class VisionTransformerPredictor(nn.Module):
         )
         self.predictor_pos_embed.data.copy_(torch.from_numpy(predictor_pos_embed).float().unsqueeze(0))
         # define transformers
-        self.predictor_blocks = nn.ModuleList(
+        self.predictor_transformer_encoders = nn.ModuleList(
             [
-                Block(
+                TransformerEncoder(
                     dim=predictor_embed_dim,
                     num_heads=num_heads,
                     mlp_ratio=mlp_ratio,
@@ -555,7 +555,7 @@ class VisionTransformerPredictor(nn.Module):
         def rescale(param: torch.Tensor, layer_id: int) -> None:
             param.div_(math.sqrt(2.0 * layer_id))
         
-        for layer_id, layer in enumerate(self.predictor_blocks, start=1):
+        for layer_id, layer in enumerate(self.predictor_transformer_encoders, start=1):
             rescale(layer.attn.proj.weight.data, layer_id)
             rescale(layer.mlp.fc2.weight.data, layer_id)
 
@@ -607,13 +607,13 @@ class VisionTransformerPredictor(nn.Module):
 
         # add positional embedding correspond to context_encoder
         x_pos_embed = self.predictor_pos_embed.repeat(batch_size, 1, 1)
-        x += apply_masks(x_pos_embed, masks_for_context_encoder)
+        x += select_mask_patches(x_pos_embed, masks_for_context_encoder)
 
         _, boundary, _ = x.shape
 
         # prepare positional embedding for patches to be predicted
         pos_embs = self.predictor_pos_embed.repeat(batch_size, 1, 1)
-        pos_embs = apply_masks(pos_embs, masks_for_predictor)
+        pos_embs = select_mask_patches(pos_embs, masks_for_predictor)
         pos_embs = repeat_interleave_batch(pos_embs, batch_size, repeat=len(masks_for_context_encoder))
         # prepare mask tokens for patch to be predicted
         pred_tokens = self.mask_token.repeat(pos_embs.size(0), pos_embs.size(1), 1)
@@ -624,8 +624,8 @@ class VisionTransformerPredictor(nn.Module):
         x = torch.cat([x, pred_tokens], dim=1)
 
         # Apply Transformers
-        for blk in self.predictor_blocks:
-            x = blk(x)
+        for predictor_transformer_encoder in self.predictor_transformer_encoders:
+            x = predictor_transformer_encoder(x)
         x = self.predictor_norm(x)
 
         # return predictions for mask tokens
