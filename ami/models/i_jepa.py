@@ -47,6 +47,8 @@ def trunc_normal_(
 
 
 def repeat_interleave_batch(x: torch.Tensor, batch_size: int, repeat: int) -> torch.Tensor:
+    """
+    """
     N = len(x) // batch_size
     x = torch.cat(
         [torch.cat([x[i * batch_size : (i + 1) * batch_size] for _ in range(repeat)], dim=0) for i in range(N)],
@@ -522,7 +524,7 @@ class VisionTransformerPredictor(nn.Module):
         self.predictor_embed = nn.Linear(context_encoder_embed_dim, predictor_embed_dim, bias=True)
         # prepare mask tokens representing patches to be predicted
         self.mask_token = nn.Parameter(torch.zeros(1, 1, predictor_embed_dim))
-        dpr = [x.item() for x in torch.linspace(0, drop_path_rate, depth)]  # stochastic depth decay rule
+        dpr = np.linspace(0, drop_path_rate, depth).tolist()  # stochastic depth decay rule
         # prepare positional embeddings
         self.predictor_pos_embed = nn.Parameter(torch.zeros(1, n_patches, predictor_embed_dim), requires_grad=False)
         predictor_pos_embed = get_2d_sincos_pos_embed(
