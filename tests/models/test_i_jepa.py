@@ -77,7 +77,7 @@ class TestVisionTransformer:
         n_patches_max = n_patch_vertical * n_patch_horizontal
         # make masks for encoder
         masks_for_context_encoder = None
-        if isinstance(n_masks_for_encoder, int):
+        if n_masks_for_encoder is not None:
             masks_for_context_encoder, n_patches_selected = _make_masks_randomly(
                 n_mask=n_masks_for_encoder, batch_size=batch_size, n_patches_max=n_patches_max
             )
