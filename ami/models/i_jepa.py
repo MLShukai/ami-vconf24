@@ -554,10 +554,10 @@ class VisionTransformerPredictor(nn.Module):
     def fix_init_weight(self) -> None:
         def rescale(param: torch.Tensor, layer_id: int) -> None:
             param.div_(math.sqrt(2.0 * layer_id))
-
-        for layer_id, layer in enumerate(self.predictor_blocks):
-            rescale(layer.attn.proj.weight.data, layer_id + 1)
-            rescale(layer.mlp.fc2.weight.data, layer_id + 1)
+        
+        for layer_id, layer in enumerate(self.predictor_blocks, start=1):
+            rescale(layer.attn.proj.weight.data, layer_id)
+            rescale(layer.mlp.fc2.weight.data, layer_id)
 
     def _init_weights(self, m: nn.Module) -> None:
         match m:
