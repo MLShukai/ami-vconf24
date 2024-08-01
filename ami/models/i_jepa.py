@@ -47,8 +47,7 @@ def trunc_normal_(
 
 
 def repeat_interleave_batch(x: torch.Tensor, batch_size: int, repeat: int) -> torch.Tensor:
-    """
-    """
+    """"""
     N = len(x) // batch_size
     x = torch.cat(
         [torch.cat([x[i * batch_size : (i + 1) * batch_size] for _ in range(repeat)], dim=0) for i in range(N)],
