@@ -1,7 +1,6 @@
 # Ref: https://github.com/facebookresearch/ijepa
 
 import math
-from typing import Optional
 
 import numpy as np
 import numpy.typing as npt
@@ -179,7 +178,7 @@ class Attention(nn.Module):
         dim: int,
         num_heads: int = 8,
         qkv_bias: bool = False,
-        qk_scale: Optional[float] = None,
+        qk_scale: float | None = None,
         attn_drop: float = 0.0,
         proj_drop: float = 0.0,
     ) -> None:
@@ -218,7 +217,7 @@ class Block(nn.Module):
         num_heads: int,
         mlp_ratio: float = 4.0,
         qkv_bias: bool = False,
-        qk_scale: Optional[float] = None,
+        qk_scale: float | None = None,
         drop: float = 0.0,
         attn_drop: float = 0.0,
         drop_path: float = 0.0,
@@ -287,7 +286,7 @@ class VisionTransformerEncoder(nn.Module):
         num_heads: int = 12,
         mlp_ratio: float = 4.0,
         qkv_bias: bool = True,
-        qk_scale: Optional[float] = None,
+        qk_scale: float | None = None,
         drop_rate: float = 0.0,
         attn_drop_rate: float = 0.0,
         drop_path_rate: float = 0.0,
@@ -320,7 +319,7 @@ class VisionTransformerEncoder(nn.Module):
             qkv_bias (bool):
                 Whether to use bias in MLPs used to get qkv in attention module.
                 Defaults to True.
-            qk_scale (Optional[float]):
+            qk_scale (float | None):
                 The multiplier to be applied to the matrix product of q and v in attention module.
                 Defaults to None.
             drop_rate (float):
@@ -401,7 +400,7 @@ class VisionTransformerEncoder(nn.Module):
                     nn.init.constant_(m.bias, 0)
 
     def forward(
-        self, images: torch.Tensor, masks_for_context_encoder: Optional[list[torch.Tensor]] = None
+        self, images: torch.Tensor, masks_for_context_encoder: list[torch.Tensor] | None = None
     ) -> torch.Tensor:
         """Encode input images into latents.
 
@@ -471,7 +470,7 @@ class VisionTransformerPredictor(nn.Module):
         num_heads: int = 12,
         mlp_ratio: float = 4.0,
         qkv_bias: bool = True,
-        qk_scale: Optional[float] = None,
+        qk_scale: float | None = None,
         drop_rate: float = 0.0,
         attn_drop_rate: float = 0.0,
         drop_path_rate: float = 0.0,
@@ -500,7 +499,7 @@ class VisionTransformerPredictor(nn.Module):
             qkv_bias (bool):
                 Whether to use bias in MLPs used to get qkv in attention module.
                 Defaults to True.
-            qk_scale (Optional[float]):
+            qk_scale (float | None):
                 The multiplier to be applied to the matrix product of q and v in attention module.
                 Defaults to None.
             drop_rate (float):
