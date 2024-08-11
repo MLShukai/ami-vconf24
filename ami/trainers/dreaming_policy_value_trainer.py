@@ -5,6 +5,7 @@ from typing import TypedDict
 import torch
 from torch import Tensor
 from torch.distributions import Distribution
+from torch.nn.utils import clip_grad_norm_
 from torch.optim import Optimizer
 from torch.utils.data import DataLoader
 from typing_extensions import override
@@ -58,6 +59,8 @@ class DreamingPolicyValueTrainer(BaseTrainer):
         imagination_temperature: float = 1.0,
         minimum_dataset_size: int = 1,
         minimum_new_data_count: int = 0,
+        policy_gradient_clip: float = 10.0,
+        value_gradient_clip: float = 10.0,
     ) -> None:
         """Initializes an Dreaming PolicyValueTrainer object.
 
@@ -75,6 +78,7 @@ class DreamingPolicyValueTrainer(BaseTrainer):
             imagination_temperature: The sampling uncertainty for forward dynamics prediction (mixture density network only.)
             minimum_dataset_size: Minimum size of the dataset required to start training.
             minimum_new_data_count: Minimum number of new data count required to run the training.
+            policy_gradient_clip: The threshold value for gradient clipping value.
         """
         super().__init__()
         self.partial_data_loader = partial_dataloader
@@ -90,6 +94,8 @@ class DreamingPolicyValueTrainer(BaseTrainer):
         self.imagination_temperature = imagination_temperature
         self.minimum_dataset_size = minimum_dataset_size
         self.minimum_new_data_count = minimum_new_data_count
+        self.policy_gradient_clip = policy_gradient_clip
+        self.value_gradient_clip = value_gradient_clip
 
     @override
     def on_data_users_dict_attached(self) -> None:
@@ -160,6 +166,13 @@ class DreamingPolicyValueTrainer(BaseTrainer):
                 return_loss = returns.mean()
                 policy_loss = -(return_loss + entropy_loss * self.entropy_coef)  # maximize.
                 policy_loss.backward()
+                clip_grad_norm_(self.policy_net.parameters(), self.policy_gradient_clip)
+                max_val = 0
+                for p in self.policy_net.parameters():
+                    max_val = max(p.grad.abs().max(), max_val)
+                self.logger.log("debug-dreamer/policy_gradient_max_val", max_val)
+                grad_norm = torch.cat([p.grad.flatten() for p in self.policy_net.parameters()]).norm(2)
+                self.logger.log("debug-dreamer/policy_gradient_norm", grad_norm)
                 policy_optimizer.step()
 
                 # Stop gradient for learning value network.
@@ -176,6 +189,13 @@ class DreamingPolicyValueTrainer(BaseTrainer):
                     value_losses.append(-value_dist.log_prob(returns[i]).mean())
                 value_loss = torch.mean(torch.stack(value_losses))
                 value_loss.backward()
+                clip_grad_norm_(self.value_net.parameters(), self.value_gradient_clip)
+                max_val = 0
+                for p in self.value_net.parameters():
+                    max_val = max(p.grad.abs().max(), max_val)
+                self.logger.log("debug-dreamer/value_gradient_max_val", max_val)
+                grad_norm = torch.cat([p.grad.flatten() for p in self.value_net.parameters()]).norm(2)
+                self.logger.log("debug-dreamer/value_gradient_norm", grad_norm)
                 value_optimizer.step()
 
                 # Logging
