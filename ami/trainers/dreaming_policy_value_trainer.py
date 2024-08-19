@@ -206,9 +206,9 @@ class DreamingPolicyValueTrainer(BaseTrainer):
                 mean_return = returns.mean()
                 policy_loss = -(return_loss + entropy_loss * self.entropy_coef)  # maximize.
                 policy_loss.backward()
-                policy_grad_norm = torch.cat(
-                    [p.grad.flatten() for p in self.policy_net.parameters() if p.grad is not None]
-                ).norm()
+                # policy_grad_norm = torch.cat(
+                #     [p.grad.flatten() for p in self.policy_net.parameters() if p.grad is not None]
+                # ).norm()
                 policy_optimizer.step()
 
                 # Stop gradient for learning value network.
@@ -225,9 +225,9 @@ class DreamingPolicyValueTrainer(BaseTrainer):
                     value_losses.append(-value_dist.log_prob(returns[i]).mean())
                 value_loss = torch.mean(torch.stack(value_losses))
                 value_loss.backward()
-                value_grad_norm = torch.cat(
-                    [p.grad.flatten() for p in self.value_net.parameters() if p.grad is not None]
-                ).norm()
+                # value_grad_norm = torch.cat(
+                #     [p.grad.flatten() for p in self.value_net.parameters() if p.grad is not None]
+                # ).norm()
                 value_optimizer.step()
 
                 # Logging
@@ -236,8 +236,8 @@ class DreamingPolicyValueTrainer(BaseTrainer):
                 self.logger.log(prefix + "entropy", entropy_loss)
                 self.logger.log(prefix + "policy_loss", policy_loss)
                 self.logger.log(prefix + "value_loss", value_loss)
-                self.logger.log(prefix + "policy_grad_norm", policy_grad_norm)
-                self.logger.log(prefix + "value_grad_norm", value_grad_norm)
+                # self.logger.log(prefix + "policy_grad_norm", policy_grad_norm)
+                # self.logger.log(prefix + "value_grad_norm", value_grad_norm)
                 self.logger.update()
 
             # Updating LR Schedulers
