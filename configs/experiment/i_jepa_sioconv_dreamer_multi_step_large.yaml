@@ -1,0 +1,100 @@
+# @package _global_
+
+defaults:
+  - override /interaction: vrchat_with_curiosity_image_ppo_agent
+  - override /interaction/agent: curiosity_image_multi_step_imagination
+  - override /models: i_jepa_sioconv_dreamer
+  - override /data_collectors: image_dynamics_dreaming
+  - override /trainers: i_jepa_forward_dynamics_dreaming
+
+shared:
+  image_height: 144
+  image_width: 144
+
+interaction:
+  observation_wrappers:
+    - _target_: ami.interactions.io_wrappers.function_wrapper.FunctionIOWrapper
+      wrap_function:
+        _target_: ami.interactions.io_wrappers.function_wrapper.normalize_tensor
+        _partial_: True
+        eps: 1e-6
+
+  action_wrappers:
+    - _target_: ami.interactions.io_wrappers.function_wrapper.FunctionIOWrapper
+      wrap_function:
+        _target_: torch.argmax
+        _partial_: true
+        dim: -1
+  agent:
+    max_imagination_steps: 100
+
+models:
+  i_jepa_context_encoder:
+    model:
+      patch_size: 12
+      embed_dim: 432
+      out_dim: 64
+      depth: 8
+      num_heads: 4
+  i_jepa_predictor:
+    model:
+      hidden_dim: 216
+      depth: 6
+      num_heads: 4
+  forward_dynamics:
+    model:
+      observation_flatten:
+        dim_out: 1024
+      core_model:
+        depth: 12
+        dim: 2048
+        dim_ff_hidden: 2048
+  policy:
+    model:
+      observation_projection:
+        dim_out: 1024
+      observation_hidden_projection:
+        dim_out: 1024
+      core_model:
+        dim_hidden: 1024
+        depth: 6
+  value:
+    model:
+      observation_projection:
+        dim_out: 1024
+      observation_hidden_projection:
+        dim_out: 1024
+      core_model:
+        dim_hidden: 1024
+        depth: 6
+
+data_collectors:
+  image:
+    max_len: ${python.eval:"24 * ${trainers.i_jepa.partial_dataloader.batch_size}"}
+  forward_dynamics_trajectory:
+    max_len: ${python.eval:"24 * (${trainers.forward_dynamics.partial_dataloader.batch_size} + 1)"}
+  dreaming_initial_states:
+    max_len: ${python.eval:"6 * ${trainers.dreaming_policy_value.partial_dataloader.batch_size}"}
+
+trainers:
+  i_jepa:
+    max_epochs: 1
+    partial_dataloader:
+      batch_size: 64
+    minimum_new_data_count: 128
+
+  forward_dynamics:
+    max_epochs: 1
+    partial_dataloader:
+      batch_size: 128
+    minimum_new_data_count: 128
+
+  dreaming_policy_value:
+    update_start_train_count: 50
+    max_epochs: 1
+    partial_dataloader:
+      batch_size: 32
+    minimum_new_data_count: 128
+    imagination_trajectory_length: 30
+
+task_name: i_jepa_sioconv_dreamer_multi_step_large
