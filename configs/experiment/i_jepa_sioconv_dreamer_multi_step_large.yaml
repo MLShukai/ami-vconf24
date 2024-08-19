@@ -32,13 +32,13 @@ models:
   i_jepa_context_encoder:
     model:
       patch_size: 12
-      embed_dim: 432
+      embed_dim: 768
       out_dim: 64
       depth: 8
       num_heads: 4
   i_jepa_predictor:
     model:
-      hidden_dim: 216
+      hidden_dim: 512
       depth: 6
       num_heads: 4
   forward_dynamics:
@@ -70,17 +70,17 @@ models:
 
 data_collectors:
   image:
-    max_len: ${python.eval:"24 * ${trainers.i_jepa.partial_dataloader.batch_size}"}
+    max_len: ${python.eval:"32 * ${trainers.i_jepa.partial_dataloader.batch_size}"}
   forward_dynamics_trajectory:
-    max_len: ${python.eval:"24 * (${trainers.forward_dynamics.partial_dataloader.batch_size} + 1)"}
+    max_len: ${python.eval:"20 * (${trainers.forward_dynamics.partial_dataloader.batch_size} + 1)"}
   dreaming_initial_states:
-    max_len: ${python.eval:"6 * ${trainers.dreaming_policy_value.partial_dataloader.batch_size}"}
+    max_len: ${python.eval:"4 * ${trainers.dreaming_policy_value.partial_dataloader.batch_size}"}
 
 trainers:
   i_jepa:
     max_epochs: 1
     partial_dataloader:
-      batch_size: 64
+      batch_size: 32
     minimum_new_data_count: 128
 
   forward_dynamics:
@@ -96,5 +96,8 @@ trainers:
       batch_size: 32
     minimum_new_data_count: 128
     imagination_trajectory_length: 30
+    imagination_temperature: 1.6
+    partial_policy_optimizer:
+      lr: 1e-6
 
 task_name: i_jepa_sioconv_dreamer_multi_step_large
