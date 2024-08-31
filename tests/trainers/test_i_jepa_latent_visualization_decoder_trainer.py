@@ -1,5 +1,6 @@
 import copy
 from functools import partial
+from typing import Literal
 
 import pytest
 import torch
@@ -34,6 +35,7 @@ ENCODER_NUM_HEADS = 4
 assert ENCODER_EMBEDDING_DIM % ENCODER_NUM_HEADS == 0
 
 
+@pytest.mark.parametrize("encoder_type", [ModelNames.I_JEPA_TARGET_ENCODER, ModelNames.I_JEPA_CONTEXT_ENCODER])
 class TestIJEPALatentVisualizationDecoderTrainer:
     @pytest.fixture
     def partial_dataloader(self):
@@ -118,9 +120,10 @@ class TestIJEPALatentVisualizationDecoderTrainer:
         image_buffer_dict: DataCollectorsDict,
         device: torch.device,
         logger: StepIntervalLogger,
+        encoder_type: Literal[ModelNames.I_JEPA_TARGET_ENCODER, ModelNames.I_JEPA_CONTEXT_ENCODER],
     ) -> IJEPALatentVisualizationDecoderTrainer:
         trainer = IJEPALatentVisualizationDecoderTrainer(
-            partial_dataloader, partial_optimizer, device, logger, minimum_new_data_count=1
+            partial_dataloader, partial_optimizer, device, logger, encoder_type, minimum_new_data_count=1
         )
         trainer.attach_model_wrappers_dict(model_wrappers_dict)
         trainer.attach_data_users_dict(image_buffer_dict.get_data_users())

@@ -2,6 +2,7 @@
 
 from functools import partial
 from pathlib import Path
+from typing import Literal
 
 import torch
 import torchvision
@@ -30,6 +31,7 @@ class IJEPALatentVisualizationDecoderTrainer(BaseTrainer):
         partial_optimizer: partial[Optimizer],
         device: torch.device,
         logger: StepIntervalLogger,
+        encoder_type: Literal[ModelNames.I_JEPA_TARGET_ENCODER, ModelNames.I_JEPA_CONTEXT_ENCODER],
         max_epochs: int = 1,
         minimum_dataset_size: int = 1,
         minimum_new_data_count: int = 0,
@@ -41,6 +43,7 @@ class IJEPALatentVisualizationDecoderTrainer(BaseTrainer):
             partial_dataloader: A partially instantiated dataloader lacking a provided dataset.
             partial_optimizer: A partially instantiated optimizer lacking provided parameters.
             device: The accelerator device (e.g., CPU, GPU) utilized for training the model.
+            encoder_type: Encoder to be visualized.
             minimum_new_data_count: Minimum number of new data count required to run the training.
         """
         super().__init__()
@@ -48,6 +51,7 @@ class IJEPALatentVisualizationDecoderTrainer(BaseTrainer):
         self.partial_dataloader = partial_dataloader
         self.device = device
         self.logger = logger
+        self.encoder_type = encoder_type
         self.max_epochs = max_epochs
         self.minimum_dataset_size = minimum_dataset_size
         self.minimum_new_data_count = minimum_new_data_count
@@ -57,7 +61,7 @@ class IJEPALatentVisualizationDecoderTrainer(BaseTrainer):
         self.image_data_user: ThreadSafeDataUser[RandomDataBuffer] = self.get_data_user(BufferNames.IMAGE)
 
     def on_model_wrappers_dict_attached(self) -> None:
-        self.target_encoder: ModelWrapper[IJEPAEncoder] = self.get_training_model(ModelNames.I_JEPA_TARGET_ENCODER)
+        self.i_jepa_encoder: ModelWrapper[IJEPAEncoder] = self.get_training_model(self.encoder_type)
         self.latent_visualization_decoder: ModelWrapper[IJEPALatentVisualizationDecoder] = self.get_training_model(
             ModelNames.I_JEPA_LATENT_VISUALIZATION_DECODER
         )
@@ -90,7 +94,7 @@ class IJEPALatentVisualizationDecoderTrainer(BaseTrainer):
 
     def train(self) -> None:
         # move to device
-        self.target_encoder = self.target_encoder.to(self.device)
+        self.i_jepa_encoder = self.i_jepa_encoder.to(self.device)
         self.latent_visualization_decoder = self.latent_visualization_decoder.to(self.device)
         self.latent_visualization_decoder_moving_average = self.latent_visualization_decoder_moving_average.to(
             self.device
@@ -108,7 +112,7 @@ class IJEPALatentVisualizationDecoderTrainer(BaseTrainer):
                 image_batch = image_batch.to(self.device)
                 # get latents from input images
                 with torch.no_grad():
-                    latents = self.target_encoder(image_batch)
+                    latents = self.i_jepa_encoder(image_batch)
                     latents = torch.nn.functional.layer_norm(
                         latents,
                         (latents.size(-1),),
@@ -116,7 +120,12 @@ class IJEPALatentVisualizationDecoderTrainer(BaseTrainer):
                     # latents: [batch_size, n_patches_height * n_patches_width, latents_dim]
                 # decode from latents
                 image_out = self.latent_visualization_decoder(input_latents=latents)
-                # image_out: [batch_size, 3, n_patches_height * (2**(len(self.latent_visualization_decoder.decoder_blocks_in_and_out_channels)-1)), n_patches_width * (2**(len(self.latent_visualization_decoder.decoder_blocks_in_and_out_channels)-1))]
+                # image_out: [
+                #     batch_size,
+                #     3,
+                #     n_patches_height * (2 ** (len(self.latent_visualization_decoder.decoder_blocks_in_and_out_channels) - 1)),
+                #     n_patches_width * (2 ** (len(self.latent_visualization_decoder.decoder_blocks_in_and_out_channels) - 1)),
+                # ]
                 # resize image_batch to calc loss with image_out
                 with torch.no_grad():
                     _, _, height, width = image_out.size()
