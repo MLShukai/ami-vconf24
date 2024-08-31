@@ -11,5 +11,5 @@ class ModelNames(str, Enum):
     I_JEPA_PREDICTOR = "i_jepa_predictor"
     I_JEPA_CONTEXT_ENCODER = "i_jepa_context_encoder"
     I_JEPA_TARGET_ENCODER = "i_jepa_target_encoder"  # Always alias to other key: `IMAGE_ENCODDER`.
-    I_JEPA_LATENT_VISUALIZATION_DECODER="i_jepa_latent_visualization_decoder"
-    I_JEPA_LATENT_VISUALIZATION_DECODER_MOVING_AVERAGE="i_jepa_latent_visualization_decoder_moving_average"
+    I_JEPA_LATENT_VISUALIZATION_DECODER = "i_jepa_latent_visualization_decoder"
+    I_JEPA_LATENT_VISUALIZATION_DECODER_MOVING_AVERAGE = "i_jepa_latent_visualization_decoder_moving_average"

@@ -1,7 +1,5 @@
 # Ref: https://github.com/facebookresearch/ijepa
 
-import copy
-import itertools
 from functools import partial
 from pathlib import Path
 
@@ -15,7 +13,9 @@ from ami.data.buffers.buffer_names import BufferNames
 from ami.data.buffers.random_data_buffer import RandomDataBuffer
 from ami.data.interfaces import ThreadSafeDataUser
 from ami.models.i_jepa import IJEPAEncoder
-from ami.models.i_jepa_latent_visualization_decoder import IJEPALatentVisualizationDecoder
+from ami.models.i_jepa_latent_visualization_decoder import (
+    IJEPALatentVisualizationDecoder,
+)
 from ami.models.model_names import ModelNames
 from ami.models.model_wrapper import ModelWrapper
 from ami.tensorboard_loggers import StepIntervalLogger
@@ -58,8 +58,12 @@ class IJEPALatentVisualizationDecoderTrainer(BaseTrainer):
 
     def on_model_wrappers_dict_attached(self) -> None:
         self.target_encoder: ModelWrapper[IJEPAEncoder] = self.get_training_model(ModelNames.I_JEPA_TARGET_ENCODER)
-        self.latent_visualization_decoder: ModelWrapper[IJEPALatentVisualizationDecoder] = self.get_training_model(ModelNames.I_JEPA_LATENT_VISUALIZATION_DECODER)
-        self.latent_visualization_decoder_moving_average: ModelWrapper[IJEPALatentVisualizationDecoder] = self.get_training_model(ModelNames.I_JEPA_LATENT_VISUALIZATION_DECODER_MOVING_AVERAGE)
+        self.latent_visualization_decoder: ModelWrapper[IJEPALatentVisualizationDecoder] = self.get_training_model(
+            ModelNames.I_JEPA_LATENT_VISUALIZATION_DECODER
+        )
+        self.latent_visualization_decoder_moving_average: ModelWrapper[
+            IJEPALatentVisualizationDecoder
+        ] = self.get_training_model(ModelNames.I_JEPA_LATENT_VISUALIZATION_DECODER_MOVING_AVERAGE)
         assert (
             self.latent_visualization_decoder.model is not self.latent_visualization_decoder_moving_average.model
         ), "latent_visualization_decoder and latent_visualization_decoder_moving_average must be allocated in memory as separate entities."
@@ -67,14 +71,13 @@ class IJEPALatentVisualizationDecoderTrainer(BaseTrainer):
         # Since the model is swapped between the inference and training threads each time it is trained,
         # the model and optimizer are built within the `train()` method.
         # The following is the initial state generation of the optimizer.
-        self.optimizer_state = self.partial_optimizer(
-            self.latent_visualization_decoder.parameters()
-        ).state_dict()
-        
+        self.optimizer_state = self.partial_optimizer(self.latent_visualization_decoder.parameters()).state_dict()
+
         # copy weights from latent_visualization_decoder to latent_visualization_decoder_moving_average
         with torch.no_grad():
             for decoder_moving_average_param, decoder_param in zip(
-                self.latent_visualization_decoder_moving_average.parameters(), self.latent_visualization_decoder.parameters()
+                self.latent_visualization_decoder_moving_average.parameters(),
+                self.latent_visualization_decoder.parameters(),
             ):
                 decoder_moving_average_param.copy_(decoder_param)
 
@@ -89,11 +92,11 @@ class IJEPALatentVisualizationDecoderTrainer(BaseTrainer):
         # move to device
         self.target_encoder = self.target_encoder.to(self.device)
         self.latent_visualization_decoder = self.latent_visualization_decoder.to(self.device)
-        self.latent_visualization_decoder_moving_average = self.latent_visualization_decoder_moving_average.to(self.device)
-        # define optimizer
-        optimizer = self.partial_optimizer(
-            self.latent_visualization_decoder.parameters()
+        self.latent_visualization_decoder_moving_average = self.latent_visualization_decoder_moving_average.to(
+            self.device
         )
+        # define optimizer
+        optimizer = self.partial_optimizer(self.latent_visualization_decoder.parameters())
         optimizer.load_state_dict(self.optimizer_state)
         # prepare about dataset
         dataset = self.image_data_user.get_dataset()
@@ -110,8 +113,10 @@ class IJEPALatentVisualizationDecoderTrainer(BaseTrainer):
                         latents,
                         (latents.size(-1),),
                     )  # normalize over feature-dim
+                    # latents: [batch_size, n_patches_height * n_patches_width, latents_dim]
                 # decode from latents
                 image_out = self.latent_visualization_decoder(input_latents=latents)
+                # image_out: [batch_size, 3, n_patches_height * (2**(len(self.latent_visualization_decoder.decoder_blocks_in_and_out_channels)-1)), n_patches_width * (2**(len(self.latent_visualization_decoder.decoder_blocks_in_and_out_channels)-1))]
                 # resize image_batch to calc loss with image_out
                 with torch.no_grad():
                     _, _, height, width = image_out.size()
@@ -126,12 +131,12 @@ class IJEPALatentVisualizationDecoderTrainer(BaseTrainer):
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
-                
+
                 # self.latent_visualization_decoder_moving_average updates weights by moving average from self.latent_visualization_decoder
                 with torch.no_grad():
                     m = self.moving_average_rate
                     for decoder_moving_average_param, decoder_param in zip(
-                        self.latent_visualization_decoder_moving_average.parameters(), 
+                        self.latent_visualization_decoder_moving_average.parameters(),
                         self.latent_visualization_decoder.parameters(),
                     ):
                         decoder_moving_average_param.data.mul_(m).add_((1.0 - m) * decoder_param.detach().data)

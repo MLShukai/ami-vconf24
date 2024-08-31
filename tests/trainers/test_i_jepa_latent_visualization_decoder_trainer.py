@@ -11,12 +11,16 @@ from ami.data.buffers.random_data_buffer import RandomDataBuffer
 from ami.data.step_data import DataKeys, StepData
 from ami.data.utils import DataCollectorsDict
 from ami.models.i_jepa import IJEPAEncoder
+from ami.models.i_jepa_latent_visualization_decoder import (
+    IJEPALatentVisualizationDecoder,
+)
 from ami.models.model_names import ModelNames
 from ami.models.model_wrapper import ModelWrapper
 from ami.models.utils import ModelWrappersDict
 from ami.tensorboard_loggers import StepIntervalLogger
-from ami.models.i_jepa_latent_visualization_decoder import IJEPALatentVisualizationDecoder
-from ami.trainers.i_jepa_latent_visualization_decoder_trainer import IJEPALatentVisualizationDecoderTrainer
+from ami.trainers.i_jepa_latent_visualization_decoder_trainer import (
+    IJEPALatentVisualizationDecoderTrainer,
+)
 
 # input data params
 IMAGE_SIZE = 256
@@ -51,7 +55,7 @@ class TestIJEPALatentVisualizationDecoderTrainer:
             num_heads=ENCODER_NUM_HEADS,
             mlp_ratio=4.0,
         )
-    
+
     @pytest.fixture
     def i_jepa_latent_visualization_decoder(self):
         return IJEPALatentVisualizationDecoder(
@@ -82,12 +86,17 @@ class TestIJEPALatentVisualizationDecoderTrainer:
 
     @pytest.fixture
     def model_wrappers_dict(
-        self, device: torch.device, i_jepa_encoder: IJEPAEncoder, i_jepa_latent_visualization_decoder: IJEPALatentVisualizationDecoder
+        self,
+        device: torch.device,
+        i_jepa_encoder: IJEPAEncoder,
+        i_jepa_latent_visualization_decoder: IJEPALatentVisualizationDecoder,
     ) -> ModelWrappersDict:
         d = ModelWrappersDict(
             {
                 ModelNames.I_JEPA_TARGET_ENCODER: ModelWrapper(i_jepa_encoder, device, has_inference=False),
-                ModelNames.I_JEPA_LATENT_VISUALIZATION_DECODER: ModelWrapper(i_jepa_latent_visualization_decoder, device, has_inference=True),
+                ModelNames.I_JEPA_LATENT_VISUALIZATION_DECODER: ModelWrapper(
+                    i_jepa_latent_visualization_decoder, device, has_inference=True
+                ),
                 ModelNames.I_JEPA_LATENT_VISUALIZATION_DECODER_MOVING_AVERAGE: ModelWrapper(
                     copy.deepcopy(i_jepa_latent_visualization_decoder), device, has_inference=True
                 ),
@@ -110,7 +119,9 @@ class TestIJEPALatentVisualizationDecoderTrainer:
         device: torch.device,
         logger: StepIntervalLogger,
     ) -> IJEPALatentVisualizationDecoderTrainer:
-        trainer = IJEPALatentVisualizationDecoderTrainer(partial_dataloader, partial_optimizer, device, logger, minimum_new_data_count=1)
+        trainer = IJEPALatentVisualizationDecoderTrainer(
+            partial_dataloader, partial_optimizer, device, logger, minimum_new_data_count=1
+        )
         trainer.attach_model_wrappers_dict(model_wrappers_dict)
         trainer.attach_data_users_dict(image_buffer_dict.get_data_users())
         return trainer
