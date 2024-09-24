@@ -7,6 +7,7 @@ from ami.models.bool_mask_i_jepa import (
     BoolMaskIJEPAEncoder,
     BoolTargetIJEPAPredictor,
     FlattenLatent,
+    UnflattenLatent,
     i_jepa_encoder_infer,
 )
 
@@ -151,3 +152,21 @@ class TestFlattenLatent:
 
         x = torch.randn(2, 4, num_patch_flatten, input_dim)
         assert mod(x).shape == (2, 4, output_dim)
+
+
+class TestUnflattenLatent:
+    @pytest.mark.parametrize("n_patches", [14, (12, 12)])
+    @pytest.mark.parametrize("input_dim", [16])
+    @pytest.mark.parametrize("output_dim", [8])
+    def test_forward(self, n_patches, input_dim, output_dim):
+        mod = UnflattenLatent(n_patches, input_dim, output_dim)
+        num_patch_flatten = math.prod(n_patches) if isinstance(n_patches, tuple) else n_patches ** 2
+
+        x = torch.randn(input_dim)
+        assert mod(x).shape == (num_patch_flatten, output_dim)
+
+        x = torch.randn(4, input_dim)
+        assert mod(x).shape == (4, num_patch_flatten, output_dim)
+
+        x = torch.randn(2, 4, input_dim)
+        assert mod(x).shape == (2, 4, num_patch_flatten, output_dim)

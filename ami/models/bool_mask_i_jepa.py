@@ -335,3 +335,50 @@ class FlattenLatent(nn.Module):
         if no_batch:
             x = x.squeeze(0)
         return x
+
+
+class UnflattenLatent(nn.Module):
+    """Unflattens 1d tensor to 2d latent representation."""
+
+    def __init__(self, n_patches: size_2d, input_dim: int, output_dim: int) -> None:
+        """Constructs UnflattenLatent module.
+
+        Args:
+            n_patches (size_2d): Number of patches along vertical and horizontal axes.
+            input_dim (int): The features size of input 1d tensor.
+            output_dim (int): Output dimension of the decoder.
+        """
+        super().__init__()
+        self.n_patches = size_2d_to_int_tuple(n_patches)
+        self.input_dim = input_dim
+        self.output_dim = output_dim
+
+        self.global_conv_transpose = nn.ConvTranspose2d(input_dim, output_dim, self.n_patches)
+        self.resnet = ResNetConv2d(output_dim, output_dim, depth=1)
+
+    def forward(self, x: Tensor) -> Tensor:
+        """Unflattens 1d tensor to 2d latent representation.
+
+        Args:
+            x (Tensor): Input 1d tensor.
+                Shape: [*, input_dim]
+
+        Returns:
+            Tensor: Unflattened 2d latent representation.
+                Shape: [*, n_patches[0] * n_patches[1], output_dim]
+        """
+        no_batch = x.ndim == 1
+        if no_batch:
+            x = x.unsqueeze(0)
+        batch_shape = x.shape[:-1]
+
+        x = x.view(-1, self.input_dim, 1, 1)
+        x = self.global_conv_transpose(x)
+        x = self.resnet(x)
+
+        x = x.reshape(*batch_shape, self.output_dim, self.n_patches[0] * self.n_patches[1])
+        x = x.transpose(-1, -2)
+
+        if no_batch:
+            x = x.squeeze(0)
+        return x
