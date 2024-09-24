@@ -1,9 +1,12 @@
+import math
+
 import pytest
 import torch
 
 from ami.models.bool_mask_i_jepa import (
     BoolMaskIJEPAEncoder,
     BoolTargetIJEPAPredictor,
+    FlattenLatent,
     i_jepa_encoder_infer,
 )
 
@@ -130,3 +133,21 @@ class TestBoolTargetIJEPAPredictor:
         assert predictions.size(0) == batch_size, "batch_size mismatch"
         assert predictions.size(1) == n_patches, "num of patch mismatch"
         assert predictions.size(2) == context_encoder_out_dim, "out_dim mismatch"
+
+
+class TestFlattenLatent:
+    @pytest.mark.parametrize("n_patches", [14, (12, 12)])
+    @pytest.mark.parametrize("input_dim", [8])
+    @pytest.mark.parametrize("output_dim", [16])
+    def test_forward(self, n_patches, input_dim, output_dim):
+        mod = FlattenLatent(n_patches, input_dim, output_dim)
+        num_patch_flatten = math.prod(n_patches) if isinstance(n_patches, tuple) else n_patches ** 2
+
+        x = torch.randn(num_patch_flatten, input_dim)
+        assert mod(x).shape == (output_dim,)
+
+        x = torch.randn(4, num_patch_flatten, input_dim)
+        assert mod(x).shape == (4, output_dim)
+
+        x = torch.randn(2, 4, num_patch_flatten, input_dim)
+        assert mod(x).shape == (2, 4, output_dim)

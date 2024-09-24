@@ -8,6 +8,7 @@ from torch import Tensor
 
 from .components.patch_embedding import PatchEmbedding
 from .components.positional_embeddings import get_2d_positional_embeddings
+from .components.resnet import ResNetConv2d
 from .components.vision_transformer_layer import VisionTransformerLayer
 from .i_jepa import i_jepa_encoder_infer  # Alias
 from .model_wrapper import ModelWrapper
@@ -289,3 +290,48 @@ def _init_weights(m: nn.Module, init_std: float) -> None:
             nn.init.trunc_normal_(m.weight, std=init_std)
             if m.bias is not None:
                 nn.init.constant_(m.bias, 0)
+
+
+class FlattenLatent(nn.Module):
+    """Flattens latent to 1d tensor."""
+
+    def __init__(self, n_patches: size_2d, input_dim: int, output_dim: int) -> None:
+        """Constructs FlattenLatent module.
+
+        Args:
+            n_patches (size_2d): Number of patches along vertical and horizontal axes.
+            input_dim (int): Output dimension of the encoder.
+            output_dim (int): The features size of output 1d tensor.
+        """
+        super().__init__()
+        self.input_dim = input_dim
+        self.output_dim = output_dim
+
+        self.n_patches = size_2d_to_int_tuple(n_patches)
+        self.resnet = ResNetConv2d(input_dim, input_dim, depth=1)
+        self.global_conv = nn.Conv2d(input_dim, output_dim, self.n_patches)
+
+    def forward(self, latents: Tensor) -> Tensor:
+        """Flattens latents tensor.
+
+        Args:
+            latents (Tensor): Output of the encoder.
+                Shape: [*, n_patches, input_dim]
+
+        Returns:
+            Tensor: Flattened tensor.
+                Shape: [*, output_dim]
+        """
+        no_batch = latents.ndim == 2
+        if no_batch:
+            latents = latents.unsqueeze(0)
+        batch_shape = latents.shape[:-2]
+
+        x = latents.transpose(-1, -2).reshape(-1, self.input_dim, *self.n_patches)
+        x = self.resnet(x)
+        x = self.global_conv(x)
+
+        x = x.reshape(*batch_shape, self.output_dim)
+        if no_batch:
+            x = x.squeeze(0)
+        return x
