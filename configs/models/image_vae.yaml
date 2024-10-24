@@ -1,8 +1,0 @@
-# Instantiation Method Version 2.
-
-_target_: ami.models.instantiations.image_vae
-device: ${devices.0}
-height: ${shared.image_height}
-width: ${shared.image_width}
-channels: ${shared.image_channels}
-latent_dim: 512

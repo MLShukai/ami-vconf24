@@ -3,6 +3,7 @@
 defaults:
   - override /models: bool_mask_i_jepa
   - override /trainers: bool_mask_i_jepa
+  - override /interaction: default
   - override /shared: default
 
 shared:

@@ -5,10 +5,10 @@
 defaults:
   - _self_
 
-  - interaction: default
-  - data_collectors: image
-  - models: image_vae
-  - trainers: image_vae
+  - interaction: vrchat_with_curiosity_image_ppo_agent
+  - data_collectors: image_dynamics_ppo
+  - models: i_jepa_sioconv_resnetpolicy_small
+  - trainers: i_jepa_forward_dynamics_ppo
   - threads: default
 
   - checkpointing: default
@@ -22,7 +22,7 @@ defaults:
   # experiment configs allow for version control of specific hyperparameters
   - experiment: null
 
-task_name: image_encoding
+task_name: default
 
 # You can specify saved checkpoint path when system is begun.
 saved_checkpoint_path: null
