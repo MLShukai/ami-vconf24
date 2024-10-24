@@ -1,4 +1,0 @@
-defaults:
-  - image_vae: default
-  - forward_dynamics: default
-  - ppo: default

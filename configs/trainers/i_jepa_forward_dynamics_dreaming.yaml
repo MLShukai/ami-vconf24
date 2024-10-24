@@ -1,4 +1,0 @@
-defaults:
-  - i_jepa: bool_mask
-  - forward_dynamics: with_action_reward
-  - dreaming_policy_value: default
