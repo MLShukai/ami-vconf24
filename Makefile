@@ -47,9 +47,39 @@ endif
 # Tensorboardなど
 DOCKER_PORT_OPTION := --net host
 
-DATA_DIR := `pwd`/data
-
 docker-run: ## Run built docker image.
+	docker run -itd $(DOCKER_GPU_OPTION) \
+	$(DOCKER_PORT_OPTION) \
+	--mount type=volume,source=ami-vconf24_$(NAME),target=/workspace \
+	--mount type=bind,source=`pwd`/logs,target=/workspace/logs \
+	$(DOCKER_IMAGE_NAME)
+
+docker-run-host: ## Run the built Docker image along with network, camera, and other host OS device access
+	docker run -itd $(DOCKER_GPU_OPTION) \
+	$(DOCKER_PORT_OPTION) \
+	--mount type=volume,source=ami-vconf24_$(NAME),target=/workspace \
+	--mount type=bind,source=`pwd`/logs,target=/workspace/logs \
+	--device `v4l2-ctl --list-devices | grep -A 1 'OBS Virtual Camera' | grep -oP '\t\K/dev.*'`:/dev/video0:mwr \
+	$(DOCKER_IMAGE_NAME)
+
+docker-run-unity: ## Run the built Docker image with Unity executables
+	docker run -itd $(DOCKER_GPU_OPTION) \
+	$(DOCKER_PORT_OPTION) \
+	--mount type=volume,source=ami-vconf24_$(NAME),target=/workspace \
+	--mount type=bind,source=`pwd`/logs,target=/workspace/logs \
+	--mount type=bind,source=`pwd`/unity_executables,target=/workspace/unity_executables \
+	$(DOCKER_IMAGE_NAME)
+
+DATA_DIR := `pwd`/data
+docker-run-with-data:
+	docker run -itd $(DOCKER_GPU_OPTION) \
+	$(DOCKER_PORT_OPTION) \
+	--mount type=volume,source=ami-vconf24_$(NAME),target=/workspace \
+	--mount type=bind,source=`pwd`/logs,target=/workspace/logs \
+	--mount type=bind,source=$(DATA_DIR),target=/workspace/data,readonly \
+	$(DOCKER_IMAGE_NAME)
+
+docker-run-full: ## Run built docker image with full features.
 	docker run -itd $(DOCKER_GPU_OPTION) \
 	$(DOCKER_PORT_OPTION) \
 	--mount type=volume,source=ami-vconf24_$(NAME),target=/workspace \
