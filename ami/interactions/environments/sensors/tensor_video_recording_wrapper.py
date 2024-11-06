@@ -11,33 +11,20 @@ from .base_sensor import BaseSensorWrapper
 
 
 class TensorVideoRecordingWrapper(BaseSensorWrapper[Tensor, Tensor]):
-    """Records the image tensor data to a video file."""
+    """Records the image tensor data using rguments for internal TensorVideoRecorder."""
 
     @override
-    def __init__(
-        self,
-        sensor: BaseSensor[Tensor],
-        output_dir: str | Path,
-        width: int,
-        height: int,
-        frame_rate: float,
-        file_name_format: str = "%Y-%m-%d_%H-%M-%S.%f.mp4",
-        fourcc: str = "mp4v",
-        do_rgb_to_bgr: bool = True,
-        do_scale_255: bool = True,
-    ) -> None:
+    def __init__(self, sensor: BaseSensor[Tensor], *args: Any, **kwds: Any) -> None:
+        """Initializes the TensorVideoRecordingWrapper.
+
+        Args:
+            sensor (BaseSensor[Tensor]): Sensor to be wrapped.
+            *args (Any): Arguments for internal TensorVideoRecorder.
+            **kwds (Any): Keyword arguments for internal TensorVideoRecorder.
+        """
         super().__init__(sensor)
 
-        self._recorder = TensorVideoRecorder(
-            str(output_dir),
-            width,
-            height,
-            frame_rate,
-            file_name_format,
-            fourcc,
-            do_rgb_to_bgr,
-            do_scale_255,
-        )
+        self._recorder = TensorVideoRecorder(*args, **kwds)
 
     @override
     def setup(self) -> None:
