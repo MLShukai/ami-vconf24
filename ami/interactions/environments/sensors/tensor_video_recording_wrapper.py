@@ -11,7 +11,8 @@ from .base_sensor import BaseSensorWrapper
 
 
 class TensorVideoRecordingWrapper(BaseSensorWrapper[Tensor, Tensor]):
-    """Records the image tensor data using rguments for internal TensorVideoRecorder."""
+    """Records the image tensor data using rguments for internal
+    TensorVideoRecorder."""
 
     @override
     def __init__(self, sensor: BaseSensor[Tensor], *args: Any, **kwds: Any) -> None:
