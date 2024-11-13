@@ -17,7 +17,6 @@ from ami.data.buffers.buffer_names import BufferNames
 from ami.data.buffers.random_data_buffer import RandomDataBuffer
 from ami.data.interfaces import ThreadSafeDataUser
 from ami.models.bool_mask_i_jepa import BoolMaskIJEPAEncoder
-from ami.models.i_jepa import IJEPAEncoder
 from ami.models.i_jepa_latent_visualization_decoder import (
     IJEPALatentVisualizationDecoder,
 )
@@ -99,7 +98,7 @@ class IJEPALatentVisualizationDecoderTrainer(BaseTrainer):
         self.image_data_user: ThreadSafeDataUser[RandomDataBuffer] = self.get_data_user(BufferNames.IMAGE)
 
     def on_model_wrappers_dict_attached(self) -> None:
-        self.encoder: ModelWrapper[BoolMaskIJEPAEncoder | IJEPAEncoder] = self.get_frozen_model(self.encoder_name)
+        self.encoder: ModelWrapper[BoolMaskIJEPAEncoder] = self.get_frozen_model(self.encoder_name)
         self.decoder: ModelWrapper[IJEPALatentVisualizationDecoder] = self.get_training_model(self.decoder_name)
 
         self.optimizer_state = self.partial_optimizer(self.decoder.parameters()).state_dict()
