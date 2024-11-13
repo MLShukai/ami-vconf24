@@ -5,7 +5,7 @@ python scripts/launch.py experiment=bool_mask_i_jepa_with_videos models=bool_mas
 python scripts/launch.py experiment=learn_only_sioconv models=learn_only_sioconv_large max_uptime=10 && \
 python scripts/launch.py experiment=learn_only_sioconv models=learn_only_sioconv_small max_uptime=10 && \
 python scripts/launch.py experiment=learn_only_sioconv models=learn_only_sioconv_large max_uptime=10 \
-    trainers.forward_dynamics.partial_sampler._target_=ami.trainers.components.random_permutation_sampler.RandomPermutationSampler 
+    trainers.forward_dynamics.partial_sampler._target_=ami.trainers.components.random_permutation_sampler.RandomPermutationSampler \
     && \
 python scripts/launch.py experiment=learn_i_jepa_sioconv max_uptime=10 && \
 python scripts/launch.py experiment=i_jepa_sioconv_ppo_multi_step \
