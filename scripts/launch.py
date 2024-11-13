@@ -1,5 +1,6 @@
 """Launch script file for the ami system."""
 import os
+import sys
 
 import hydra
 import rootutils
@@ -126,6 +127,9 @@ def main(cfg: DictConfig) -> None:
     logger.info(f"Saved the final checkpoint to '{ckpt_path}'")
 
     logger.info("Terminated AMI.")
+
+    if main_thread.check_background_threads_exception():
+        sys.exit("System exit by some exception.")
 
 
 if __name__ == "__main__":
