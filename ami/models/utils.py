@@ -1,6 +1,5 @@
 """This file contains utility classes."""
 from collections import UserDict
-from enum import Enum
 from pathlib import Path
 from typing import Any, TypeAlias
 
@@ -11,12 +10,6 @@ from typing_extensions import override
 from ami.checkpointing import SaveAndLoadStateMixin
 
 from .model_wrapper import ModelWrapper, ThreadSafeInferenceWrapper
-
-
-class ModelNames(str, Enum):
-    """Enumerates the all model names used in ami system."""
-
-    IMAGE_ENCODER = "image_encoder"
 
 
 class InferenceWrappersDict(UserDict[str, ThreadSafeInferenceWrapper[nn.Module]]):
