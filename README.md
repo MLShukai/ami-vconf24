@@ -135,12 +135,10 @@ Linux OSに事前に次のツールをインストールしておく。
 
 ```sh
 # project root. (ami/)
-make docker-build
-make docker-run
+make docker-build # build image
+make docker-run # minimum features
+make docker-run-full # full features, such as obs communication.
+make docker-attach # attach shell to latest docker container.
 ```
 
 後は、VSCodeなどのエディタからDockerコンテナにアタッチし、 `/workspace` ディレクトリで作業を行う。このディレクトリはホストOSの永続ボリュームであるため、Dockerのコンテナインスタンスを削除しても作業内容はホストOSに保存される。
-
-## Wiki
-
-追加のドキュメントは[Wiki](https://github.com/MLShukai/ami/wiki)に整備予定。
