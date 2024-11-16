@@ -46,17 +46,6 @@
 
 ## 開発環境セットアップ
 
-### プロジェクト単体
-
-事前にPoetryを導入しておく。
-
-```sh
-poetry install
-poetry run python script/launch.py
-```
-
-Poetryの基本的な使い方は[Poetryをサクッと使い始めてみる](https://qiita.com/ksato9700/items/b893cf1db83605898d8a)を参照。
-
 ### VRChat連携
 
 <!-- ここにVRChat連携の図を貼る -->
@@ -130,6 +119,14 @@ Linux OSに事前に次のツールをインストールしておく。
 - make
 
   Ubuntu Desktopではプリインストールされていないため、 `sudo apt install build-essentials` でインストールする。
+
+- v4l-utils
+
+  ```sh
+  sudo apt install v4l-utils
+  ```
+
+  OBSの仮想カメラデバイスファイルをコマンドラインから特定するために使用する。
 
 次のコマンドでイメージをビルドし、起動する。
 
