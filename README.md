@@ -1,18 +1,48 @@
-# AMI: Autonomous Machine Intelligence
+# ソーシャルVR空間に適用可能な好奇心ベースの自律機械知能
 
-<!-- ここに良い感じのバナーを貼る -->
+![banner](/docs/images/banner.png)
 
-<!--
-## ぱみきゅーのご紹介
-- VRChatで観測する方法
-- Discordのpamiq-now
+## バーチャル学会 2024 発表概要
 
-## AMIの位置づけと開発の動機
-- P-AMI<Q>プロジェクト概要・目的
-- AMIの位置づけ
+<https://vconf.org/2024/poster/d2/#3>
 
-Google Slide・PDFへのリンク等
--->
+## メンバー
+
+- GesonAnko
+- myxy
+- zassou
+- ぶんちん
+- 田中スイセン
+- Klutz
+
+## 論文を読んできてくれた方へ
+
+論文を読んでいただき誠にありがとうございます。以下に論文中で紹介している機能の実装がありますのでご確認ください。
+
+### 経験データのバッファ実装
+
+<img src="docs/images/data_buffer_move.svg" width="70%" alt=data_buffer_move>
+
+- [BaseDataBuffer](/ami/data/buffers/base_data_buffer.py)
+- [DataCollector,DataUser](/ami/data/interfaces.py)
+
+### 学習スレッドと推論スレッド間のモデルパラメータ同期
+
+<img src="docs/images/model_sync.svg" width="70%" alt=model_sync>
+
+- [BaseTrainer.\_sync_a_model](/ami/trainers/base_trainer.py#L192)
+
+### Unity上のワールド
+
+以下のリポジトリに別途実装しました。
+
+<https://github.com/MLShukai/AMIUnityEnvironment>
+
+### Join the Discord Server !
+
+自律機械知能P-AMI\<Q>の開発について詳しく知りたい方はぜひDiscordサーバへ！
+
+<https://discord.gg/54EhvtZgHH>
 
 ## 開発環境セットアップ
 
