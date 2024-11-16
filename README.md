@@ -133,11 +133,14 @@ Linux OSに事前に次のツールをインストールしておく。
 
 次のコマンドでイメージをビルドし、起動する。
 
+ビルド済のイメージもある。<https://hub.docker.com/repository/docker/mlshukai/ami-vconf24/general>
+
 ```sh
 # project root. (ami/)
+docker pull mlshukai/ami-vconf24:latest # pull built image.
 make docker-build # build image
-make docker-run # minimum features
-make docker-run-full # full features, such as obs communication.
+make docker-run # run minimum features
+make docker-run-full # with full features, such as obs communication.
 make docker-attach # attach shell to latest docker container.
 ```
 
