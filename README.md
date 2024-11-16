@@ -133,7 +133,7 @@ Linux OSに事前に次のツールをインストールしておく。
 
 次のコマンドでイメージをビルドし、起動する。
 
-ビルド済のイメージもある。<https://hub.docker.com/repository/docker/mlshukai/ami-vconf24/general>
+ビルド済のイメージも公開している。<https://hub.docker.com/r/mlshukai/ami-vconf24>
 
 ```sh
 # project root. (ami/)
