@@ -28,7 +28,8 @@ type:
 run: format test-full type
 
 NAME := $(shell whoami)
-DOCKER_IMAGE_NAME := mlshukai/ami-vconf24:latest
+DOCKER_IMAGE_TAG := latest
+DOCKER_IMAGE_NAME := mlshukai/ami-vconf24:$(DOCKER_IMAGE_TAG)
 
 docker-build: ## Build docker image.
 	docker build -t $(DOCKER_IMAGE_NAME) --no-cache .
