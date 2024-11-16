@@ -142,3 +142,5 @@ make docker-attach # attach shell to latest docker container.
 ```
 
 後は、VSCodeなどのエディタからDockerコンテナにアタッチし、 `/workspace` ディレクトリで作業を行う。このディレクトリはホストOSの永続ボリュームであるため、Dockerのコンテナインスタンスを削除しても作業内容はホストOSに保存される。
+
+[実験の実行コマンドは`scripts/run-all-experiment.sh`に記述した。](/scripts/run-all-experiment.sh)
