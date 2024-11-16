@@ -21,14 +21,14 @@
 
 ### 経験データのバッファ実装
 
-<img src="docs/images/data_buffer_move.svg" width="70%" alt=data_buffer_move>
+<img src="docs/images/data_buffer_move.svg" width="300" alt=data_buffer_move>
 
 - [BaseDataBuffer](/ami/data/buffers/base_data_buffer.py)
 - [DataCollector,DataUser](/ami/data/interfaces.py)
 
 ### 学習スレッドと推論スレッド間のモデルパラメータ同期
 
-<img src="docs/images/model_sync.svg" width="70%" alt=model_sync>
+<img src="docs/images/model_sync.svg" width="300" alt=model_sync>
 
 - [BaseTrainer.\_sync_a_model](/ami/trainers/base_trainer.py#L192)
 
