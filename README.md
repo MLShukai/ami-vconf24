@@ -32,6 +32,28 @@
 
 - [BaseTrainer.\_sync_a_model](/ami/trainers/base_trainer.py#L192)
 
+### モデルの実装
+
+実験に使用したモデル、データバッファ、Trainerへのリンクです。
+
+- I-JEPA
+  - [Model](/ami/models/bool_mask_i_jepa.py)
+  - [Data Buffer](/ami/data/buffers/random_data_buffer.py)
+  - [Trainer](/ami/trainers/bool_mask_i_jepa_trainer.py)
+- SioConv
+  - [Model](/ami/models/components/sioconv.py)
+  - [Data Buffer](/ami/data/buffers/causal_data_buffer.py)
+  - [Trainer](/ami/trainers/forward_dynamics_trainer.py)
+- Policy
+  - [Modelはconfigファイルを参照](/configs//models/i_jepa_sioconv_resnetpolicy.yaml)
+  - [Data Buffer](/ami/data/buffers/ppo_trajectory_buffer.py)
+  - [Trainer](/ami/trainers/ppo_policy_trainer.py)
+
+### 事前学習用データと学習済I-JEPAのパラメータ
+
+Hugging Face Hub上にアップロードしています。
+<https://huggingface.co/collections/mlshukai/vconf24-assets-67457f76f07989f1a6f0ed56>
+
 ### Unity上のワールド
 
 以下のリポジトリに別途実装しました。
