@@ -51,7 +51,7 @@
 
 ### 事前学習用データと学習済I-JEPAのパラメータ
 
-Hugging Face Hub上にアップロードしています。
+Hugging Face Hub上にアップロードしています。zipファイルをダウンロードしたのちに`data`ディレクトリに展開してください。
 <https://huggingface.co/collections/mlshukai/vconf24-assets-67457f76f07989f1a6f0ed56>
 
 ### Unity上のワールド
